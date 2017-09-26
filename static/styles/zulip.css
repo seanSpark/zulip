@@ -4,6 +4,8 @@ html {
     height: 100%;
     overflow-x: hidden;
     overflow-y: hidden;
+
+    touch-action: manipulation;
 }
 
 #css-loading {
@@ -11,25 +13,25 @@ html {
 }
 
 body {
-    font-family: 'Humbug', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 /* Common background color */
 body,
 #tab_bar_underpadding {
     background-color: #ffffff;
-   -webkit-transition: background-color 200ms linear;
-   -moz-transition: background-color 200ms linear;
-   -o-transition: background-color 200ms linear;
-   -ms-transition: background-color 200ms linear;
-   transition: background-color 200ms linear;
+    -webkit-transition: background-color 200ms linear;
+    -moz-transition: background-color 200ms linear;
+    -o-transition: background-color 200ms linear;
+    -ms-transition: background-color 200ms linear;
+    transition: background-color 200ms linear;
 }
 
 input,
 button,
 select,
 textarea {
-    font-family: 'Humbug', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     line-height: normal;
 }
 
@@ -39,6 +41,22 @@ blockquote p {
 
 a {
     cursor: pointer;
+}
+
+.no-select {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.auto-select {
+    -webkit-touch-callout: auto;
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
 }
 
 p.n-margin {
@@ -76,7 +94,7 @@ p.n-margin {
 .top-messages-logo {
     position: absolute;
     left: calc(50% - 12px);
-    top: 67px;
+    top: 57px;
     width: 24px;
     height: 24px;
 }
@@ -89,9 +107,9 @@ p.n-margin {
     left: calc(50vw - 220px);
     padding: 15px;
 
-    background-color: #FAFAFA;
+    background-color: hsl(0, 0%, 98%);
     border-radius: 5px;
-    box-shadow: 0px 0px 30px rgba(0,0,0,0.25);
+    box-shadow: 0px 0px 30px hsla(0, 0%, 0%, 0.25);
     z-index: 110;
 
     animation-name: pulse;
@@ -113,26 +131,38 @@ p.n-margin {
 
 @keyframes pulse {
     0% {
-        box-shadow: 0px 0px 30px rgba(0,0,0,0.35);
+        box-shadow: 0px 0px 30px hsla(0, 0%, 0%, 0.35);
     }
     50% {
-        box-shadow: 0px 0px 30px rgba(0,0,0,0.15);
+        box-shadow: 0px 0px 30px hsla(0, 0%, 0%, 0.15);
     }
     100% {
-        box-shadow: 0px 0px 30px rgba(0,0,0,0.35);
+        box-shadow: 0px 0px 30px hsla(0, 0%, 0%, 0.35);
     }
+}
+
+.fade-in-message {
+    animation-name: fadeInMessage;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+}
+
+.fade-in-message .message_edit_notice {
+    animation-name: fadeInEditNotice;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
 }
 
 #unmute_muted_topic_notification .btn {
     background-color: transparent;
-    border: 1px solid #444;
+    border: 1px solid hsl(0, 0%, 27%);
     outline: none;
     transition: all 0.2s ease;
 }
 
 #unmute_muted_topic_notification .btn:hover {
-    background-color: #444;
-    color: #FAFAFA;
+    background-color: hsl(0, 0%, 27%);
+    color: hsl(0, 0%, 98%);
 }
 
 #unmute_muted_topic_notification .exit-me {
@@ -147,7 +177,7 @@ p.n-margin {
     z-index: 102; /* Needs to be higher than .alert-bar-container */
     width: 100%;
     background: #ffffff;
-    border-bottom: 1px solid #dadada;
+    border-bottom: 1px solid hsl(0, 0%, 85%);
     height: 40px;
 }
 
@@ -231,7 +261,7 @@ p.n-margin {
 
 textarea,
 input {
-    font-family: 'Humbug', Helvetica, Arial, sans-serif;
+    font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif;
 }
 
 /* Override Bootstrap's fixed sizes for various elements */
@@ -257,8 +287,7 @@ input[type="email"],
 input[type="url"],
 input[type="search"],
 input[type="tel"],
-input[type="color"]
-{
+input[type="color"] {
     font-size: inherit;
     height: 1.4em;
 }
@@ -273,6 +302,29 @@ li,
     font-size: inherit;
     height: auto;
     line-height: 100%;
+}
+
+.copy_message,
+.copy_message:focus {
+    background-color: white;
+    height: 20px;
+    width: 15px;
+    padding: 5px 10px;
+    border: none;
+    position: relative;
+    top: 28px;
+    left: -5px;
+    margin-top: -24px;
+    display: block;
+}
+
+#clipboard_image {
+    margin-top: -5px;
+    margin-left: -8px;
+}
+
+.copy_message:hover svg path {
+    fill: black;
 }
 
 .btn-large {
@@ -300,7 +352,6 @@ li,
 #user-settings-avatar {
     width: 100px;
     height: 100px;
-    margin-top: 10px;
 }
 
 /* Classes for hiding and showing controls */
@@ -339,7 +390,7 @@ code {
     font-size: 0.857em;
 }
 
-.message_content p code {
+.message_content code {
     white-space: pre-wrap;
     padding: 0px 4px;
     background-color: #fff;
@@ -377,18 +428,18 @@ pre {
 pre::-webkit-scrollbar {
     height: 8px;
 
-    background-color: rgba(0,0,0,0.05);
+    background-color: hsla(0, 0%, 0%, 0.05);
 }
 
 pre::-webkit-scrollbar-thumb {
-    background-color: rgba(0,0,0,0.3);
+    background-color: hsla(0, 0%, 0%, 0.3);
     border-radius: 20px;
 
     transition: all 0.2s ease;
 }
 
 pre::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(0,0,0,0.6);
+    background-color: hsla(0, 0%, 0%, 0.6);
 }
 
 pre code {
@@ -399,13 +450,13 @@ pre code {
 /* Style inline code inside a link
    to look more like a normal link */
 a code {
-    color: #08C;
-    border-color: #08C;
+    color: hsl(200, 100%, 40%);
+    border-color: hsl(200, 100%, 40%);
 }
 
 a:hover code {
-    color: #005580;
-    border-color: #005580;
+    color: hsl(200, 100%, 25%);
+    border-color: hsl(200, 100%, 25%);
 }
 
 .preserve_spaces {
@@ -438,9 +489,26 @@ a:hover code {
     display: inline;
 }
 
+.tooltip.in {
+    font-size: 12px;
+    line-height: 1.3;
+
+    opacity: 1;
+}
+
+.tooltip.in.left {
+    margin-left: -12px;
+    margin-top: 3px;
+}
+
+.tooltip .tooltip-inner {
+    background-color: rgba(20, 20, 20, 0.8);
+    padding: 3px 5px;
+}
+
 #message_edit_tooltip {
     float: right;
-    color: #000;
+    color: hsl(0, 0%, 0%);
     font-size: 13px;
     margin-top: 3px;
     margin-left: 6px;
@@ -448,7 +516,7 @@ a:hover code {
 }
 
 #message_edit_tooltip:hover {
-   opacity: 1.0;
+    opacity: 1.0;
 }
 
 .message-edit-tooltip-inner {
@@ -464,7 +532,7 @@ a:hover code {
 }
 
 .message_header_stream a.message_label_clickable {
-    color: #333;
+    color: hsl(0, 0%, 20%);
 }
 
 li.actual-dropdown-menu i {
@@ -477,10 +545,10 @@ li.actual-dropdown-menu i {
 
 .message_area_padder {
     /* The height of the header and the tabbar plus a small gap */
-    margin-top: 100px;
+    margin-top: 93px;
     /* This is needed for the floating recipient bar
-     in Firefox only, for some reason; otherwise it gets
-     a scrollbar */
+       in Firefox only, for some reason;
+       otherwise it gets a scrollbar */
     overflow: visible;
 }
 
@@ -518,7 +586,7 @@ td.pointer {
 
 .message_edit_notice {
     font-size: 10px;
-    color: #a1a1a1;
+    color: hsl(0, 0%, 63%);
     font-weight: 300;
     line-height: 0px;
     text-align: right;
@@ -526,6 +594,11 @@ td.pointer {
     position: absolute;
     left: 0px;
     top: 16px;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .include-sender .message_edit_notice:before {
@@ -543,7 +616,7 @@ td.pointer {
 .message_time {
     display: block;
     font-size: 12px;
-    color: #b1b1b1;
+    color: hsl(0, 0%, 69%);
     vertical-align: middle;
     padding: 1px;
     font-weight: 400;
@@ -555,6 +628,30 @@ td.pointer {
     -moz-transition: background-color 2.7s ease-in, color 2.7s ease-in;
     -o-transition: background-color 2.7s ease-in, color 2.7s ease-in;
     transition: background-color 2.7s ease-in, color 2.7s ease-in;
+}
+
+/* The way this overrides the menus with a background-color and a high
+   z-index is kinda hacky, and requires some annoying color-matching,
+   but it works. */
+.alert-copied {
+    position: absolute;
+    right: -110px;
+    font-size: 14px;
+    color: hsl(170, 47%, 54%);
+    background-color: white;
+    z-index: 999;
+    padding-left: 20px;
+    padding-right: 40px;
+    font-weight: 400;
+    display: none;
+}
+
+.private-message .alert-copied {
+    background-color: hsl(192, 19%, 95%);
+}
+
+.include-sender .alert-copied {
+    top: -3px;
 }
 
 .status-time {
@@ -611,23 +708,23 @@ td.pointer {
 }
 
 .message_list .recipient_row {
-    background: #f1f1f1;
-    border-bottom: 1px solid #e2e2e2;
-    border-top: 1px solid #e2e2e2;
+    background: hsl(0, 0%, 94%);
+    border-bottom: 1px solid hsl(0, 0%, 88%);
+    border-top: 1px solid hsl(0, 0%, 88%);
     margin-bottom: 10px;
+}
+
+.floating_recipient .recipient_row {
+    border-top: 1px solid hsl(0, 0%, 88%);
 }
 
 .stream_label {
     display: inline-block;
-    padding: 3px 4px 2px 4px;
+    padding: 3px 7px 2px 6px;
     font-weight: normal;
     height: 17px;
     line-height: 17px;
-    border-top-color: rgba(0, 0, 0, 0);
-    border-right-color: rgba(0, 0, 0, 0);
-    border-bottom-color: rgba(0, 0, 0, 0);
-    background-color: #e2e2e2;
-    border-left-color: #e2e2e2;
+    background-color: hsl(0, 0%, 88%);
     border-width: 0px;
     position: relative;
     text-decoration: none;
@@ -647,41 +744,9 @@ td.pointer {
     text-decoration: none;
 }
 
-.stream_label:after {
-   left: 100%;
-   top: 50%;
-   content: " ";
-   height: 0px;
-   width: 0px;
-   position: absolute;
-   pointer-events: none;
-   margin-top: -11px;
-   border-style: solid;
-   border-width: 11px 0 11px 5px;
-   border-color: inherit;
-   z-index: 2;
-   -moz-transform: scale(.9999);
-}
-
-.stream_label:before {
-   left: 100%;
-   top: 50%;
-   content: " ";
-   height: 0px;
-   width: 0px;
-   position: absolute;
-   pointer-events: none;
-   margin-top: -14px;
-   border-style: solid;
-   border-width: 14px 0 14px 6px;
-   border-color: rgba(0, 0, 0, 0) rgba(0, 0, 0, 0) rgba(0, 0, 0, 0) #ffffff;
-   z-index: 1;
-   -moz-transform: scale(.9999);
-}
-
 .stream_topic {
     display: inline-block;
-    padding: 3px 6px 2px 12px;
+    padding: 3px 4px 2px 7px;
     margin-left: -5px;
     height: 17px;
     line-height: 17px;
@@ -692,7 +757,7 @@ td.pointer {
     right: 0;
     top: 0;
 
-    color: #888;
+    color: hsl(0, 0%, 53%);
     font-size: 12px;
     font-weight: 600;
     padding: 3px 11px 2px 10px;
@@ -702,6 +767,14 @@ td.pointer {
 
 .recipient_row_date.hide-date {
     display: none;
+}
+
+/*
+   used to override .hide-date when floating_recipient_bar just begins to
+   overlap the top-most recipient_bar
+*/
+.recipient_row_date.temp-show-date {
+    display: block !important;
 }
 
 .floating_recipient .recipient_row_date.hide-date {
@@ -726,7 +799,9 @@ td.pointer {
 
 .summary_row.last_message .message_header {
     border-bottom-right-radius: 3px;
-    box-shadow: inset 0px 2px 1px -2px #333, inset -2px 0px 1px -2px #333, inset 0px -2px 1px -2px #333;
+    box-shadow: inset 0px 2px 1px -2px hsl(0, 0%, 20%),
+        inset -2px 0px 1px -2px hsl(0, 0%, 20%),
+        inset 0px -2px 1px -2px hsl(0, 0%, 20%);
 }
 
 .summary_row.last_message .summary_colorblock {
@@ -749,12 +824,12 @@ td.pointer {
 
 .message_header_colorblock {
     border-radius: 3px 0px 0px 0px;
-    /* box-shadow: 0px 2px 3px #ccc; */
-    box-shadow: inset 0px 2px 1px -2px #333, inset 2px 0px 1px -2px #333 !important;
+    /* box-shadow: 0px 2px 3px hsl(0, 0%, 80%); */
+    box-shadow: inset 0px 2px 1px -2px hsl(0, 0%, 20%), inset 2px 0px 1px -2px hsl(0, 0%, 20%) !important;
 }
 
 .summary_row_private_message .summary_colorblock {
-    background: #000;
+    background: hsl(0, 0%, 0%);
 }
 
 .messages-expand,
@@ -763,8 +838,8 @@ td.pointer {
 }
 
 /*
-We can't collapse the floating recipient bar yet, so this is
-just a temporary hack.
+   We can't collapse the floating recipient bar yet, so this is
+   just a temporary hack.
 */
 .floating_recipient .messages-collapse {
     display: none;
@@ -781,44 +856,118 @@ just a temporary hack.
 }
 
 @-webkit-keyframes rotate {
-    from { -webkit-transform: rotate(0deg); }
-    to { -webkit-transform: rotate(359deg); }
+    from {
+        -webkit-transform: rotate(0deg);
+    }
+    to {
+        -webkit-transform: rotate(359deg);
+    }
 }
 
 @-moz-keyframes rotate {
-    from { -moz-transform: rotate(0deg); }
-    to { -moz-transform: rotate(359deg); }
+    from {
+        -moz-transform: rotate(0deg);
+    }
+    to {
+        -moz-transform: rotate(359deg);
+    }
 }
 
 @-ms-keyframes rotate {
-    from { -ms-transform: rotate(0deg); }
-    to { -ms-transform: rotate(359deg); }
+    from {
+        -ms-transform: rotate(0deg);
+    }
+    to {
+        -ms-transform: rotate(359deg);
+    }
 }
 
 @-moz-keyframes rotate {
-    from { -o-transform: rotate(0deg); }
-    to { -o-transform: rotate(359deg); }
+    from {
+        -o-transform: rotate(0deg);
+    }
+    to {
+        -o-transform: rotate(359deg);
+    }
 }
 
 @keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(359deg); }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(359deg);
+    }
+}
+
+@-webkit-keyframes fadeInMessage {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@-moz-keyframes fadeInMessage {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInMessage {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@-webkit-keyframes fadeInEditNotice {
+    0% {
+        transform: translateX(-10px);
+    }
+    100% {
+        transform: translateX(0px);
+    }
+}
+
+@-moz-keyframes fadeInEditNotice {
+    0% {
+        transform: translateX(-10px);
+    }
+    100% {
+        transform: translateX(0px);
+    }
+}
+
+@keyframes fadeInEditNotice {
+    0% {
+        transform: translateX(-10px);
+    }
+    100% {
+        transform: translateX(0px);
+    }
 }
 
 .messagebox-bottom {
     height: 3px;
     background-color: #fff;
     border-radius: 0px 0px 3px 0px;
-    /* box-shadow: 0px 2px 2px -1px #ccc; */
-    border: 1px solid #c1dbd5;
+    /* box-shadow: 0px 2px 2px -1px hsl(0, 0%, 80%); */
+    border: 1px solid hsl(166, 26%, 80%);
     border-top: none;
     border-left: none;
 }
 
 .messagebox-bottom-colorblock {
     border-radius: 0px 0px 0px 3px;
-    /* box-shadow: 0px 2px 2px -1px #ccc; */
-    border: 1px solid #c1dbd5;
+    /* box-shadow: 0px 2px 2px -1px hsl(0, 0%, 80%); */
+    border: 1px solid hsl(166, 26%, 80%);
     border-top: none;
     border-right: none;
 }
@@ -829,14 +978,13 @@ just a temporary hack.
 }
 
 .message_header_private_message .message_label_clickable {
-    background-color: #444444;
+    background-color: hsl(0, 0%, 27%);
     display: inline-block;
     padding: 3px 4px 2px 4px;
     font-weight: normal;
     font-size: 14px;
     height: 17px;
     line-height: 17px;
-    border-left-color: #444;
 }
 
 /* Base color backgrounds for messageboxes,
@@ -849,15 +997,15 @@ just a temporary hack.
 
 .private-message .messagebox,
 .message_header_private_message .message-header-contents {
-    background-color: #feffe0;
+    background-color: hsl(192, 19%, 95%);
 }
 
-.floating_recipient .message-header-contents {
-    border-right: 1px solid #e2e2e2;
+.message-header-contents {
+    border-right: 1px solid hsl(0, 0%, 88%);
 }
 
-.mention .messagebox-content {
-    background-color: #ffe4e0;
+.mention .messagebox {
+    background-color: hsl(8, 94%, 94%);
 }
 
 .messagebox .message_top_line {
@@ -884,7 +1032,7 @@ just a temporary hack.
 }
 
 .unread-marker-fill {
-    background: #2b8213;
+    background: hsl(107, 74%, 29%);
     width: 3px;
     height: 100%;
     box-shadow: inset 0px -1px 0px 0px #ffffff;
@@ -921,11 +1069,11 @@ just a temporary hack.
 }
 
 .selected_message .messagebox-content {
-    box-shadow: inset 0px 0px 0px 2px #4577bc,
-                     -1px -1px 0px 0px #4577bc,
-                      1px 1px 0px 0px #4577bc,
-                     -1px 1px 0px 0px #4577bc,
-                      1px -1px 0px 0px #4577bc;
+    box-shadow: inset 0px 0px 0px 2px hsl(215, 47%, 50%),
+                     -1px -1px 0px 0px hsl(215, 47%, 50%),
+                      1px 1px 0px 0px hsl(215, 47%, 50%),
+                     -1px 1px 0px 0px hsl(215, 47%, 50%),
+                      1px -1px 0px 0px hsl(215, 47%, 50%);
 }
 
 .message_sender {
@@ -935,7 +1083,7 @@ just a temporary hack.
 }
 
 .sender_name {
-    color: #333;
+    color: hsl(0, 0%, 20%);
     display: inline-block;
     font-weight: 700;
     vertical-align: top;
@@ -945,15 +1093,15 @@ just a temporary hack.
 }
 
 .sender-status {
-    display: block;
-    left: 46px;
-    top: -26px;
-    padding-bottom: 6px;
-    padding-right: 35px;
+    display: inline-block;
+    margin: 8px 0px 8px -3px;
+    /* this normalizes the margin of the emoji reactions with normal messages. */
+    padding-bottom: 5px;
     vertical-align: middle;
     line-height: 18px;
     font-size: 14px;
     position: relative;
+    max-width: calc(100% - 50px);
 }
 
 .message_controls.sender-status-controls {
@@ -967,11 +1115,7 @@ just a temporary hack.
 
 .sender_name_hovered .sender_name,
 .sender_name_hovered .sender_name-in-status {
-    color: #0088CC;
-}
-
-.sender_name_hovered .inline_profile_picture {
-    border-color: #0088CC;
+    color: hsl(200, 100%, 40%);
 }
 
 .message_sender .bot-icon {
@@ -989,7 +1133,7 @@ just a temporary hack.
 }
 
 .actions_hover:hover {
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
 }
 
 .message_failed,
@@ -1007,7 +1151,7 @@ just a temporary hack.
 
 a.message_label_clickable:hover {
     cursor: pointer;
-    color: #08C;
+    color: hsl(200, 100%, 40%);
 }
 
 .on_hover_topic_edit {
@@ -1025,6 +1169,7 @@ a.message_label_clickable:hover {
 }
 
 .on_hover_topic_mute {
+    padding-left: 3px;
     opacity: .1;
 }
 
@@ -1037,27 +1182,22 @@ a.message_label_clickable:hover {
     width: 12px;
     display: inline-block;
     position: relative;
-    color: #bbb;
+    color: hsl(0, 0%, 73%);
 }
 
 .edit_content:hover {
     cursor: pointer;
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
 }
 
-.reactions_hover {
+.message_controls > .reaction_button {
     display: inline-block;
     position: relative;
-    color: #bbb;
+    color: hsl(0, 0%, 73%);
 }
 
-.reactions_hover:hover {
-    color: #0088CC;
-}
-
-.message_hovered .reactions_hover,
-.has_reactions_popover .reactions_hover {
-    opacity: 1;
+.message_controls > .reaction_button:hover {
+    color: hsl(200, 100%, 40%);
 }
 
 .message_hovered .info,
@@ -1075,11 +1215,16 @@ a.dark_background:hover,
 }
 
 .dark_background a.message_label_clickable:hover {
-    color: #3BF;
+    color: hsl(200, 99%, 60%);
 }
 
 .message_top_line {
+    pointer-events: none;
     position: relative;
+}
+
+.message_top_line * {
+    pointer-events: auto;
 }
 
 .include-sender .message_top_line {
@@ -1100,7 +1245,7 @@ a.dark_background:hover,
 
 .actions_hovered .message_time,
 .actions_hovered .info {
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
     cursor: pointer;
 }
 
@@ -1108,7 +1253,7 @@ a.dark_background:hover,
     display: inline-block;
     position: relative;
     font-size: 15px;
-    color: #bbb;
+    color: hsl(0, 0%, 73%);
 }
 
 .actions_hovered .actions_link {
@@ -1124,8 +1269,8 @@ div.message_table {
 
 .message_row {
     position: relative;
-    border-left: 1px solid #e2e2e2;
-    border-right: 1px solid #e2e2e2;
+    border-left: 1px solid hsl(0, 0%, 88%);
+    border-right: 1px solid hsl(0, 0%, 88%);
 }
 
 .message_row.selected_message {
@@ -1136,31 +1281,37 @@ div.focused_table {
     display: block;
 }
 
-.include-sender .message_content {
+.include-sender .message_content:not(:empty) {
     margin-top: -16px;
 }
 
 .message_content {
     line-height: 17px;
     font-size: 14px;
-    padding-left: 46px;
+    margin-left: 46px;
     display: block;
     position: relative;
 }
 
+.message_content:empty {
+    display: none;
+}
+
 .message_edit_content {
     line-height: 18px;
+    resize: vertical!important;
+    max-height: 24em;
 }
 
 .message_edit_countdown_timer {
     text-align: right;
     display: inline;
-    color: #a1a1a1;
+    color: hsl(0, 0%, 63%);
 }
 
 .message_edit_tooltip {
     display: inline;
-    color: #a1a1a1;
+    color: hsl(0, 0%, 63%);
 }
 
 .message-edit-timer-control-group {
@@ -1188,7 +1339,7 @@ div.focused_table {
     font-size: 14px;
 
     border-radius: 0px;
-    border: 1px solid #afbfca;
+    border: 1px solid hsl(204, 20%, 74%);
     box-shadow: none;
 }
 
@@ -1232,7 +1383,7 @@ div.focused_table {
 .message_length_controller {
     display: none;
     text-align: center;
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
 
     /* to match .message_content */
     margin-left: 5px;
@@ -1252,22 +1403,22 @@ div.message_content table {
 }
 
 div.message_content thead {
-    background-color: #EFEFEF;
+    background-color: hsl(0, 0%, 93%);
 }
 
-div.message_content div {
+div.message_content tr {
     display: table-row;
     vertical-align: inherit;
 }
 
-div.message_content div {
-    border: 1px solid #cccccc;
+div.message_content tr th {
+    border: 1px solid hsl(0, 0%, 80%);
     padding: 4px;
     text-align: left;
 }
 
-div.message_content div {
-    border: 1px solid #cccccc;
+div.message_content tr td {
+    border: 1px solid hsl(0, 0%, 80%);
     padding: 4px;
 }
 
@@ -1296,17 +1447,21 @@ blockquote p {
 }
 
 .messagebox p {
-    margin: 3px 0px 3px 0px;
+    margin: 3px 0px 10px 0px;
+}
+
+.messagebox p:last-of-type {
+    margin-bottom: 3px;
 }
 
 .messagebox blockquote {
     padding-left: 5px;
     margin-left: 10px;
-    border-left-color: #ddd;
+    border-left-color: hsl(0, 0%, 86%);
 }
 
 .bookend {
-    padding-top: 10px;
+    margin-top: 10px;
     background-color: transparent;
 }
 
@@ -1328,8 +1483,9 @@ blockquote p {
     width: 35px;
     height: 35px;
     margin-right: 11px;
-    background-size: 35px 35px;
     vertical-align: top;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .home-error-bar {
@@ -1339,10 +1495,6 @@ blockquote p {
 
 .streamname {
     font-weight: bold;
-}
-
-.alert {
-    display: none;
 }
 
 .home-error-bar .alert {
@@ -1383,61 +1535,40 @@ blockquote p {
 }
 
 #tab_list li {
-   white-space: nowrap;
-   list-style-type: none;
-   display: inline-block;
-   position: relative;
-   font-weight: 300;
-   background-color: #f9f9f9;
-   margin: 0px;
-   padding: 0px;
-   text-overflow: ellipsis;
-   height: 40px;
+    white-space: nowrap;
+    list-style-type: none;
+    display: inline-block;
+    position: relative;
+    font-weight: 300;
+    background-color: hsl(0, 0%, 97%);
+    margin: 0px;
+    padding: 0px;
+    text-overflow: ellipsis;
+    height: 40px;
+    padding: 0 5px;
 }
 
 #tab_list li.inactive {
-   border-top-color: rgba(0, 0, 0, 0);
-   border-right-color: rgba(0, 0, 0, 0);
-   border-bottom-color: rgba(0, 0, 0, 0);
-   background-color: #e2e2e2;
-   border-left-color: #e2e2e2;
-   border-width: 0px;
+    background-color: hsl(0, 0%, 88%);
+    border-width: 0px;
+    margin-right: -4px;
+    font-size: 14px;
 }
 
 #tab_list li.private_message a {
-   color: #ffffff;
-}
-
-#tab_list li.inactive:after {
-   left: 100%;
-   top: 50%;
-   content: " ";
-   height: 0px;
-   width: 0px;
-   position: absolute;
-   pointer-events: none;
-   margin-top: -25px;
-   border-style: solid;
-   border-width: 25px 0 25px 12px;
-   border-color: inherit;
-   z-index: 2;
-   -moz-transform: scale(.9999);
+    color: #ffffff;
 }
 
 #tab_list li.inactive:before {
-   left: 100%;
-   top: 50%;
-   content: " ";
-   height: 0px;
-   width: 0px;
-   position: absolute;
-   pointer-events: none;
-   margin-top: -28px;
-   border-style: solid;
-   border-width: 28px 0 28px 14px;
-   border-color: rgba(0, 0, 0, 0) rgba(0, 0, 0, 0) rgba(0, 0, 0, 0) #ffffff;
-   z-index: 1;
-   -moz-transform: scale(.9999);
+    left: 100%;
+    top: 50%;
+    content: " ";
+    height: 0px;
+    width: 0px;
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+    -moz-transform: scale(.9999);
 }
 
 #tab_list a {
@@ -1446,64 +1577,56 @@ blockquote p {
     border-color: inherit;
     width: 100%;
     display: inline-block;
-    padding: 0px 8px;
-    max-width: 120px;
+    padding: 0px 5px;
+    max-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 #tab_list li.active {
-    padding-left: 17px;
-    padding-right: 10px;
-    background-color: #e2e2e2;
-    max-width: 120px;
+    background-color: hsl(0, 0%, 88%);
+    max-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 #tab_list li.active.root {
-    padding-left: 10px;
+    padding: 0px 10px;
 }
 
 #tab_list li.private_message {
-   border-top-color: rgba(0, 0, 0, 0);
-   border-right-color: rgba(0, 0, 0, 0);
-   border-bottom-color: rgba(0, 0, 0, 0);
-   background-color: #111111;
-   border-left-color: #111111;
-   color: #ffffff;
-   border-width: 0px;
+    border-top-color: hsla(0, 0%, 0%, 0.0);
+    border-right-color: hsla(0, 0%, 0%, 0.0);
+    border-bottom-color: hsla(0, 0%, 0%, 0.0);
+    background-color: hsl(0, 0%, 27%);
+    border-left-color: hsl(0, 0%, 27%);
+    color: #ffffff;
+    border-width: 0px;
 }
 
 #tab_list .root {
-    border-color: #e2e2e2;
-    background-color: #e2e2e2;
+    border-color: hsl(0, 0%, 88%);
+    background-color: hsl(0, 0%, 88%);
     margin: 0px;
 }
 
-#tab_list li.stream a,
-#tab_list li.private_message a {
-    padding-left: 17px;
-    padding-right: 4px;
-}
-
 #tab_list li.root a {
-    color: #858585;
+    color: hsl(0, 0%, 52%);
     padding-right: 2px;
 }
 
 
 #tab_list .root a:hover {
-    color: #000000;
+    color: hsl(0, 0%, 0%);
 }
 
 #tab_bar_underpadding {
     position: absolute;
     width: 100%;
     top: 40px;
-    height: 20px;
+    height: 10px;
     z-index: 99;
 }
 
@@ -1526,15 +1649,15 @@ blockquote p {
     left: 0px;
     text-align: center;
     vertical-align: middle;
-    border-right: 2px solid #afbfca;
+    border-right: 2px solid hsl(204, 20%, 74%);
 }
 
 #streamlist-toggle-button {
     text-decoration: none;
-    color: #858585;
+    color: hsl(0, 0%, 52%);
     display: block;
     position: relative;
-    background-color: #e4e4e4;
+    background-color: hsl(0, 0%, 89%);
     width: 40px;
     height: 19px;
     padding-top: 12px;
@@ -1548,11 +1671,11 @@ blockquote p {
     height: 12px;
     min-width: 12px;
     line-height: 12px;
-    background: #670000;
+    background: hsl(0, 100%, 20%);
     top: 4px;
     right: 4px;
-    border: 1px solid #eee;
-    box-shadow: 0px 0px 1px rgba(0,0,0,0.2);
+    border: 1px solid hsl(0, 0%, 93%);
+    box-shadow: 0px 0px 1px hsla(0, 0%, 0%, 0.2);
     border-radius: 12px;
     padding: 1px 1px 1px 1px;
     font-size: 9px;
@@ -1566,9 +1689,9 @@ blockquote p {
     right: 0px;
     top: 30px;
     min-width: 180px;
-    -webkit-box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
-    -moz-box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
-    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+    -webkit-box-shadow: 0px 0px 5px hsla(0, 0%, 0%, 0.2);
+    -moz-box-shadow: 0px 0px 5px hsla(0, 0%, 0%, 0.2);
+    box-shadow: 0px 0px 5px hsla(0, 0%, 0%, 0.2);
 }
 
 .nav .dropdown-menu:after {
@@ -1579,7 +1702,7 @@ blockquote p {
     right: 10px;
     display: inline-block;
     border-right: 7px solid transparent;
-    border-bottom: 7px solid #aaa;
+    border-bottom: 7px solid hsl(0, 0%, 66%);
     border-left: 7px solid transparent;
     content: '';
     z-index: 10;
@@ -1588,7 +1711,7 @@ blockquote p {
 #navbar-buttons ul.nav .dropdown-toggle,
 #navbar-buttons ul.nav li.active .dropdown-toggle {
     font-size: 20px;
-    color: #858585;
+    color: hsl(0, 0%, 52%);
     text-shadow: none;
     padding-left: 0px !important;
     background-color: inherit;
@@ -1603,12 +1726,12 @@ blockquote p {
 
 #navbar-buttons ul.nav .dropdown-toggle,
 #navbar-buttons ul.nav li.active .dropdown-toggle:hover {
-    color: #111111;
+    color: hsl(0, 0%, 7%);
 }
 
 #navbar-buttons ul.nav li.dropdown.open .dropdown-toggle {
     background: none;
-    color: #111111;
+    color: hsl(0, 0%, 7%);
     text-shadow: none;
 }
 
@@ -1670,30 +1793,29 @@ nav a .no-style {
     width: auto;
     float: none;
     overflow: hidden;
-    border-right: 1px solid #dadada;
+    border-right: 1px solid hsl(0, 0%, 85%);
     height: 40px;
 }
 
 #search_query {
     width: 100%;
-    font-size: 18px;
+    font-size: 16px;
     height: 40px;
     padding: 0px;
-    color: #222;
-    box-shadow: inset 2px 0px 0px 0px #afbfca;
+    color: hsl(0, 0%, 13%);
     padding-left: 35px;
     padding-right: 20px;
-    background: rgb(255,255,255); /* Old browsers */
+    background: hsl(0, 0%, 100%); /* Old browsers */
     border: none;
     border-radius: 0px;
-    font-family: 'Humbug';
+    font-family: 'Source Sans Pro';
     font-weight: 300;
     line-height: 27px;
 }
 
 
 #search_query:focus {
-     box-shadow: inset 0px 0px 0px 2px #afbfca;
+    box-shadow: inset 0px 0px 0px 2px hsl(204, 20%, 74%);
 }
 
 #searchbox .search_button,
@@ -1707,7 +1829,7 @@ nav a .no-style {
     height: 30px;
     text-align: center;
     padding: 4px;
-    color: #ccc;
+    color: hsl(0, 0%, 80%);
     font-size: 18px;
     box-shadow: none;
     -webkit-box-shadow: none;
@@ -1717,7 +1839,7 @@ nav a .no-style {
 }
 
 #searchbox .search_button:hover {
-    color: #000;
+    color: hsl(0, 0%, 0%);
 }
 
 #searchbox .search_button[disabled] {
@@ -1725,34 +1847,34 @@ nav a .no-style {
 }
 
 #searchbox a.search_icon {
-    color: #ccc;
+    color: hsl(0, 0%, 80%);
     text-decoration: none;
+    display: block;
+    width: 1px;
+    height: 1px;
 }
 
 #searchbox a.search_icon:hover {
-    color: #000;
+    color: hsl(0, 0%, 0%);
     text-decoration: none;
 }
 
 .highlight {
-    background-color: #FCEA81;
+    background-color: hsl(51, 94%, 74%);
 }
 
 .highlight_text_inserted {
-    background-color: #E6EDFF;
+    color: hsl(122, 72%, 30%);
+    background-color: hsl(120, 64%, 95%);
 }
 
 .highlight_text_deleted {
-    background-color: #FFE6E6;
-}
-
-.highlight_text_replaced {
-    background-color: #F5E6FF;
+    color: hsl(0, 0%, 73%);
+    text-decoration: line-through;
+    background-color: hsl(7, 90%, 92%);
 }
 
 #search_arrows {
-    margin-bottom: 5px;
-
     /* Bootstrap wants font-size: 0 to eliminate space between
        the buttons.  We need to inherit the font size, so we
        remove the button gap by adjusting "letter" spacing. */
@@ -1777,7 +1899,7 @@ div.floating_recipient {
 }
 
 .message-header-contents {
-    background: #e2e2e2;
+    background: hsl(0, 0%, 88%);
 }
 
 .recipient_row.sticky {
@@ -1805,21 +1927,11 @@ div.floating_recipient {
 #bottom_whitespace {
     display: block;
     height: 300px;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
-
-#home-error {
-    display: none;
 }
 
 .loading_indicator_spinner {
     /* If you change these, make sure to adjust the constants in
-     * loading.make_indicator as well */
+       loading.make_indicator as well */
     height: 38px;
     width: 38px;
     float: left;
@@ -1827,8 +1939,8 @@ div.floating_recipient {
 
 .loading_indicator_text {
     /* If you change these, make sure to adjust the constants in
-     * loading.make_indicator as well */
-    margin-left: 20px;
+       loading.make_indicator as well */
+    margin-left: 5px;
     font-size: 1.2em;
     font-weight: 300;
     line-height: 38px;
@@ -1848,11 +1960,13 @@ div.floating_recipient {
     line-height: 20px;
     display: inline-block;
     float: none;
+    margin-top: 9px;
 }
 
 .settings-section .loading_indicator_spinner {
-    width: 100%;
-    height: 100%;
+    width: 20%;
+    height: 20px;
+    margin-top: 7px;
     vertical-align: middle;
     display: inline-block;
 }
@@ -1877,6 +1991,7 @@ div.floating_recipient {
 
 .twitter-image,
 .message_inline_image {
+    position: relative;
     margin-bottom: 5px;
     margin-left: 5px;
     height: 100px;
@@ -1905,35 +2020,21 @@ div.floating_recipient {
     font-weight: bold;
 }
 
-.popover {
-    width: auto;
+.katex-html {
+    line-height: initial;
+    white-space: initial;
 }
 
-.popover-title {
-    overflow-x: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-
-    font-size: inherit;
-    line-height: inherit;
+.katex-display .katex-html {
+    line-height: 3em;
 }
 
-.popover-title:empty {
-    display: none;
+.katex-display {
+    margin: 0em 0;
 }
 
-.popover_info {
-    text-align: center;
-}
-
-.popover hr {
-    margin-top: 5px;
-    margin-bottom: 5px;
-}
-
-.popover-left,
-.popover-right {
-    max-width: 200px;
+.tex-error {
+    color: gray;
 }
 
 .hotkeys_table {
@@ -1976,19 +2077,34 @@ div.floating_recipient {
 #loading_more_messages_indicator_box {
     position: relative;
     left: -50%;
-    top: -40px;
+    top: -43px;
     z-index: 1;
     -webkit-border-radius: 6px;
-       -moz-border-radius: 6px;
-            border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
 }
 
 #page_loading_indicator {
     margin: 10px auto;
 }
 
+#page_loading_indicator_box_container {
+    position: absolute;
+    left: 50%;
+}
+
+#page_loading_indicator_box {
+    position: relative;
+    left: -50%;
+    top: -43px;
+    z-index: 1;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+}
+
 .table-striped thead th {
-    background-color: #444;
+    background-color: hsl(0, 0%, 27%);
     color: white;
 }
 
@@ -1997,8 +2113,8 @@ div.floating_recipient {
 }
 
 .conversation-partners {
-    display: block;
-    line-height: 1.2em;
+    display: inline-block;
+    line-height: 1.2;
     width: 90%;
     overflow: hidden;
 }
@@ -2034,46 +2150,12 @@ div.floating_recipient {
     cursor: pointer;
 }
 
-.streams_popover .sp-container {
-    background: white;
-    cursor: pointer;
-    border: none;
-}
-
-.sp-container {
-    z-index: 100;
-}
-
-.streams_popover .sp-palette-container {
-    border-right: none;
-}
-
-.streams_popover .colorpicker-container {
-    display: inline-block;
-    margin-right: 10px;
-}
-
-.streams_popover .popover_sub_unsub_button {
-    margin-top: 0px;
-    float: none;
-}
-
-.streams_popover .popover_sub_unsub_button::after {
-    content: " Unsubscribe";
-}
-
-.stream_sub_unsub_button {
-    min-width: 140px;
-    margin-top: 9px;
-    margin-right: 10px;
-}
-
 .sub_button_row {
     text-align: center;
 }
 
 button.primary {
-    background-color: #89a0b3;
+    background-color: hsl(207, 21%, 62%);
     padding: 2px;
     color: #fff;
     border: none;
@@ -2081,7 +2163,7 @@ button.primary {
 }
 
 button.primary:hover {
-    background-color: #91aabe;
+    background-color: hsl(207, 25%, 65%);
 }
 
 button.primary:focus {
@@ -2100,8 +2182,9 @@ button.topic_edit_cancel {
     overflow: hidden;
     margin-top: 0;
     top: 5%;
-    outline: 0; /* Bootstrap uses tabindex=-1 on modals for focus and ESC handling,
-                   so avoid the outline it causes */
+    /* Bootstrap uses tabindex=-1 on modals for focus and ESC handling,
+       so avoid the outline it causes */
+    outline: 0;
 }
 
 .modal-body {
@@ -2119,7 +2202,7 @@ button.topic_edit_cancel {
 
 #invite-user .modal-header {
     padding: 7px 15px;
-    border-color: #ddd;
+    border-color: hsl(0, 0%, 86%);
 }
 
 #invite-user .modal-header .exit {
@@ -2130,7 +2213,7 @@ button.topic_edit_cancel {
     position: absolute;
     top: 6px;
     right: 5px;
-    color: #aaa;
+    color: hsl(0, 0%, 66%);
 }
 
 #invitee_emails {
@@ -2138,7 +2221,7 @@ button.topic_edit_cancel {
     max-height: 300px;
 }
 
-#invite-user .custom_invite_body {
+#invite-user #custom_invite_body {
     margin-top: 10px;
 }
 
@@ -2151,6 +2234,7 @@ button.topic_edit_cancel {
 
 #invite-user .modal-body {
     margin-bottom: 58px;
+    position: relative;
 }
 
 #invite-user .modal-footer {
@@ -2193,21 +2277,13 @@ button.topic_edit_cancel {
 }
 
 .empty_feed_notice {
-    padding: 3em 4em;
+    padding: 3em 1em;
     display: none;
-}
-
-.empty_feed_notice h4 {
     text-align: center;
 }
 
 .notification {
     cursor: pointer;
-}
-
-#empty_narrow_private_message p,
-#empty_narrow_message p {
-    text-align: center;
 }
 
 .message-fade,
@@ -2219,20 +2295,17 @@ button.topic_edit_cancel {
     height: 25px;
     width: 25px;
     position: relative;
-    top: 3px;
     margin-top: -7px;
-}
-
-.emoji.realm-emoji {
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
+    vertical-align: middle;
+    top: 3px;
 }
 
 .twitter-tweet {
-    border: 1px solid #ddd;
+    border: 1px solid hsl(0, 0%, 86%);
     padding: .5em .75em;
     margin-bottom: 0.25em;
+    word-break: break-word;
+    min-height: 48px;
 }
 
 .twitter-avatar {
@@ -2245,7 +2318,7 @@ button.topic_edit_cancel {
 .star {
     display: inline-block;
     font-size: 14px;
-    color: #2c8211;
+    color: hsl(106, 77%, 29%);
 }
 
 .star:not(.empty-star) {
@@ -2254,17 +2327,17 @@ button.topic_edit_cancel {
 }
 
 .empty-star {
-    color: #bbb;
+    color: hsl(0, 0%, 73%);
 }
 
 .empty-star:hover {
     cursor: pointer;
-    color: #565656;
+    color: hsl(0, 0%, 34%);
 }
 
 .star:hover {
     cursor: pointer;
-    color: #0d7245;
+    color: hsl(153, 80%, 25%);
 }
 
 /* FIXME: Combine this rule with the one in portico.css somehow? */
@@ -2286,7 +2359,7 @@ button.topic_edit_cancel {
 .sub-unsub-message,
 .date_row {
     text-align: center;
-    padding-bottom: 10px;
+    margin-bottom: 10px;
 }
 
 .date_row .date-direction {
@@ -2298,11 +2371,12 @@ button.topic_edit_cancel {
     display: inline-block;
     vertical-align: middle;
     width: 33%;
-    border-top: 1px solid #e2e2e2;
+    border-top: 1px solid hsl(0, 0%, 88%);
     border-bottom: 1px solid #fff;
     margin: 0px 5px 0px 5px;
 }
 
+.sub-unsub-message span,
 .date_row span {
     display: block;
     background: inherit;
@@ -2310,10 +2384,17 @@ button.topic_edit_cancel {
     overflow: hidden;
     text-transform: uppercase;
     font-size: 0.8em;
-    color: #bbb;
+    color: hsl(0, 0%, 73%);
     text-shadow: 1px 1px 0px #fff;
 }
 
+.sub-unsub-message span {
+    font-size: 1em;
+    text-transform: none;
+}
+
+.sub-unsub-message span:before,
+.sub-unsub-message span:after,
 .date_row span:before,
 .date_row span:after {
     display: inline-block;
@@ -2322,15 +2403,17 @@ button.topic_edit_cancel {
     vertical-align: middle;
     width: 50%;
     height: 0px;
-    border-top: 1px solid #e2e2e2;
+    border-top: 1px solid hsl(0, 0%, 88%);
     border-bottom: 1px solid #fff;
 }
 
+.sub-unsub-message span:before,
 .date_row span:before {
     right: 0.5em;
     margin-left: -50%;
 }
 
+.sub-unsub-message span:after,
 .date_row span:after {
     left: 0.5em;
     margin-right: -50%;
@@ -2350,12 +2433,6 @@ button.topic_edit_cancel {
 #message_edit_form {
     margin-bottom: 10px;
 }
-#message_edit_form .edit-control-label {
-    vertical-align: top;
-    padding-top: 0px;
-    margin-right: 10px;
-    font-size: 80%;
-}
 #message_edit_form .edit-controls {
     margin-left: 0px;
     margin-top: 0px;
@@ -2373,7 +2450,7 @@ button.topic_edit_cancel {
 
 #message_edit_form a.message-control-button {
     display: inline;
-    color: #777;
+    color: hsl(0, 0%, 46%);
     text-decoration: none;
     font-size: 12px;
     width: 12px;
@@ -2392,7 +2469,7 @@ button.topic_edit_cancel {
     display: inline-block;
     margin: 0 0 0 0;
     height: 22px;
-    background: #e2e2e2;
+    background: hsl(0, 0%, 88%);
     padding-left: 20px;
     padding-right: 3px;
     line-height: 22px;
@@ -2407,37 +2484,37 @@ button.topic_edit_cancel {
 }
 
 .user-mention {
-    background-color: #eee;
+    background-color: hsl(0, 0%, 93%);
     border-radius: 3px;
     padding: 0 0.2em;
-    box-shadow: 0px 0px 0px 1px #ccc;
+    box-shadow: 0px 0px 0px 1px hsl(0, 0%, 80%);
     margin-right: 2px;
     white-space: nowrap;
-    background-image: -moz-linear-gradient(top, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 100%);
-    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(0,0,0,0.1)), color-stop(100%,rgba(0,0,0,0)));
-    background-image: -webkit-linear-gradient(top, rgba(0,0,0,0.1) 0%,rgba(0,0,0,0) 100%);
-    background-image: -o-linear-gradient(top, rgba(0,0,0,0.1) 0%,rgba(0,0,0,0) 100%);
-    background-image: -ms-linear-gradient(top, rgba(0,0,0,0.1) 0%,rgba(0,0,0,0) 100%);
-    background-image: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%,rgba(0,0,0,0) 100%);
+    background-image: -moz-linear-gradient(top, hsla(0, 0%, 0%, 0.1) 0%, hsla(0, 0%, 0%, 0.0) 100%);
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%,hsla(0, 0%, 0%, 0.1)), color-stop(100%,hsla(0, 0%, 0%, 0.0)));
+    background-image: -webkit-linear-gradient(top, hsla(0, 0%, 0%, 0.1) 0%, hsla(0, 0%, 0%, 0.0) 100%);
+    background-image: -o-linear-gradient(top, hsla(0, 0%, 0%, 0.1) 0%, hsla(0, 0%, 0%, 0.0) 100%);
+    background-image: -ms-linear-gradient(top, hsla(0, 0%, 0%, 0.1) 0%, hsla(0, 0%, 0%, 0.0) 100%);
+    background-image: linear-gradient(to bottom, hsla(0, 0%, 0%, 0.1) 0%, hsla(0, 0%, 0%, 0.0) 100%);
     display: inline-block;
     margin-bottom: 1px;
 }
 
 .user-mention-me {
-    background-color: #c9fcc1;
+    background-color: hsl(112, 88%, 87%);
 }
 
 .alert-word {
-    background-color: #c9fcc1;
+    background-color: hsl(112, 88%, 87%);
 }
 
-#administration h1,
+#organization h1,
 #settings h1 {
     font-size: 25px;
     font-weight: 300;
 }
 
-#administration .administration-icon,
+#organization .organization-icon,
 #settings .settings-icon {
     margin-right: 10px;
     font-size: 20px;
@@ -2455,16 +2532,8 @@ button.topic_edit_cancel {
     position: absolute;
     left: 0;
     top: 0;
-    background: #000;
+    background: hsl(0, 0%, 0%);
     z-index: 20000;
-}
-
-#tutorial-stream {
-    width: 250px;
-}
-
-#tutorial-subject {
-    width: 250px;
 }
 
 .tutorial-done-button {
@@ -2484,17 +2553,13 @@ button.topic_edit_cancel {
     text-decoration: line-through;
 }
 
-.admin-menu-item {
-    display: none;
-}
-
 /* embed */
 .message_content .message_embed {
     display: block;
     position: relative;
     margin: 5px 0px;
     border: none;
-    border-left: 3px solid #eee;
+    border-left: 3px solid hsl(0, 0%, 93%);
     height: 70px;
     padding: 5px;
     z-index: 1;
@@ -2564,9 +2629,11 @@ button.topic_edit_cancel {
     }
 }
 
-ul.sender_info_popover i {
-    display: inline-block;
-    width: 14px;
-    text-align: center;
-    margin-right: 3px;
+.no-drag {
+    user-drag: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }

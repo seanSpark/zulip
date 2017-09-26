@@ -6,17 +6,18 @@ from typing import Any, AnyStr, Callable, Dict, Iterable, List, MutableMapping, 
 from django.conf import settings
 from django.core.exceptions import DisallowedHost
 from django.utils.translation import ugettext as _
+from django.utils.deprecation import MiddlewareMixin
 
-from zerver.lib.response import json_error
-from zerver.lib.request import JsonableError
+from zerver.lib.response import json_error, json_response_from_error
+from zerver.lib.exceptions import JsonableError, ErrorCode
 from django.db import connection
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, StreamingHttpResponse
 from zerver.lib.utils import statsd, get_subdomain
 from zerver.lib.queue import queue_json_publish
 from zerver.lib.cache import get_remote_cache_time, get_remote_cache_requests
 from zerver.lib.bugdown import get_bugdown_time, get_bugdown_requests
 from zerver.models import flush_per_request_caches, get_realm
-from zerver.exceptions import RateLimited
+from zerver.lib.exceptions import RateLimited
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.views.csrf import csrf_failure as html_csrf_failure
 from django.utils.cache import patch_vary_headers
@@ -228,7 +229,7 @@ def write_log_line(log_data, path, method, remote_ip, email, client_name,
             error_data = u"[content more than 100 characters]"
         logger.info('status=%3d, data=%s, uid=%s' % (status_code, error_data, email))
 
-class LogRequests(object):
+class LogRequests(MiddlewareMixin):
     # We primarily are doing logging using the process_view hook, but
     # for some views, process_view isn't run, so we call the start
     # method here too
@@ -253,7 +254,7 @@ class LogRequests(object):
             connection.connection.queries = []
 
     def process_response(self, request, response):
-        # type: (HttpRequest, HttpResponse) -> HttpResponse
+        # type: (HttpRequest, StreamingHttpResponse) -> StreamingHttpResponse
         # The reverse proxy might have sent us the real external IP
         remote_ip = request.META.get('HTTP_X_REAL_IP')
         if remote_ip is None:
@@ -281,22 +282,17 @@ class LogRequests(object):
                        error_content=content, error_content_iter=content_iter)
         return response
 
-class JsonErrorHandler(object):
+class JsonErrorHandler(MiddlewareMixin):
     def process_exception(self, request, exception):
-        # type: (HttpRequest, Any) -> Optional[HttpResponse]
-        if hasattr(exception, 'to_json_error_msg') and callable(exception.to_json_error_msg):
-            try:
-                status_code = exception.status_code
-            except Exception:
-                logging.warning("Jsonable exception %s missing status code!" % (exception,))
-                status_code = 400
-            return json_error(exception.to_json_error_msg(), status=status_code)
+        # type: (HttpRequest, Exception) -> Optional[HttpResponse]
+        if isinstance(exception, JsonableError):
+            return json_response_from_error(exception)
         if request.error_format == "JSON":
             logging.error(traceback.format_exc())
             return json_error(_("Internal server error"), status=500)
         return None
 
-class TagRequests(object):
+class TagRequests(MiddlewareMixin):
     def process_view(self, request, view_func, args, kwargs):
         # type: (HttpRequest, Callable[..., HttpResponse], List[str], Dict[str, Any]) -> None
         self.process_request(request)
@@ -308,38 +304,57 @@ class TagRequests(object):
         else:
             request.error_format = "HTML"
 
+class CsrfFailureError(JsonableError):
+    http_status_code = 403
+    code = ErrorCode.CSRF_FAILED
+    data_fields = ['reason']
+
+    def __init__(self, reason):
+        # type: (Text) -> None
+        self.reason = reason  # type: Text
+
+    @staticmethod
+    def msg_format():
+        # type: () -> Text
+        return _("CSRF Error: {reason}")
+
 def csrf_failure(request, reason=""):
-    # type: (HttpRequest, Optional[Text]) -> HttpResponse
+    # type: (HttpRequest, Text) -> HttpResponse
     if request.error_format == "JSON":
-        return json_error(_("CSRF Error: %s") % (reason,), status=403)
+        return json_response_from_error(CsrfFailureError(reason))
     else:
         return html_csrf_failure(request, reason)
 
-class RateLimitMiddleware(object):
+class RateLimitMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         # type: (HttpRequest, HttpResponse) -> HttpResponse
         if not settings.RATE_LIMITING:
             return response
 
-        from zerver.lib.rate_limiter import max_api_calls
+        from zerver.lib.rate_limiter import max_api_calls, RateLimitedUser
         # Add X-RateLimit-*** headers
         if hasattr(request, '_ratelimit_applied_limits'):
-            response['X-RateLimit-Limit'] = max_api_calls(request.user)
+            entity = RateLimitedUser(request.user)
+            response['X-RateLimit-Limit'] = str(max_api_calls(entity))
             if hasattr(request, '_ratelimit_secs_to_freedom'):
-                response['X-RateLimit-Reset'] = int(time.time() + request._ratelimit_secs_to_freedom)
+                response['X-RateLimit-Reset'] = str(int(time.time() + request._ratelimit_secs_to_freedom))
             if hasattr(request, '_ratelimit_remaining'):
-                response['X-RateLimit-Remaining'] = request._ratelimit_remaining
+                response['X-RateLimit-Remaining'] = str(request._ratelimit_remaining)
         return response
 
     def process_exception(self, request, exception):
-        # type: (HttpRequest, Exception) -> HttpResponse
+        # type: (HttpRequest, Exception) -> Optional[HttpResponse]
         if isinstance(exception, RateLimited):
-            resp = json_error(_("API usage exceeded rate limit, try again in %s secs") % (
-                              request._ratelimit_secs_to_freedom,), status=429)
+            resp = json_error(
+                _("API usage exceeded rate limit"),
+                data={'retry-after': request._ratelimit_secs_to_freedom},
+                status=429
+            )
             resp['Retry-After'] = request._ratelimit_secs_to_freedom
             return resp
+        return None
 
-class FlushDisplayRecipientCache(object):
+class FlushDisplayRecipientCache(MiddlewareMixin):
     def process_response(self, request, response):
         # type: (HttpRequest, HttpResponse) -> HttpResponse
         # We flush the per-request caches after every request, so they
@@ -370,7 +385,7 @@ class SessionHostDomainMiddleware(SessionMiddleware):
                 if subdomain != "":
                     realm = get_realm(subdomain)
                     if (realm is None):
-                        return render(render, "zerver/invalid_realm.html")
+                        return render(request, "zerver/invalid_realm.html")
         """
         If request.session was modified, or if the configuration is to save the
         session every time, save the changes and set a session cookie.
@@ -412,3 +427,24 @@ class SessionHostDomainMiddleware(SessionMiddleware):
                                         secure=settings.SESSION_COOKIE_SECURE or None,
                                         httponly=settings.SESSION_COOKIE_HTTPONLY or None)
         return response
+
+class SetRemoteAddrFromForwardedFor(MiddlewareMixin):
+    """
+    Middleware that sets REMOTE_ADDR based on the HTTP_X_FORWARDED_FOR.
+
+    This middleware replicates Django's former SetRemoteAddrFromForwardedFor middleware.
+    Because Zulip sits behind a NGINX reverse proxy, if the HTTP_X_FORWARDED_FOR
+    is set in the request, then it has properly been set by NGINX.
+    Therefore HTTP_X_FORWARDED_FOR's value is trusted.
+    """
+    def process_request(self, request):
+        # type: (HttpRequest) -> None
+        try:
+            real_ip = request.META['HTTP_X_FORWARDED_FOR']
+        except KeyError:
+            return None
+        else:
+            # HTTP_X_FORWARDED_FOR can be a comma-separated list of IPs.
+            # For NGINX reverse proxy servers, the client's IP will be the first one.
+            real_ip = real_ip.split(",")[0].strip()
+            request.META['REMOTE_ADDR'] = real_ip

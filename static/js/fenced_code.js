@@ -9,13 +9,13 @@ var exports = {};
 // auto-completing code blocks missing a trailing close.
 
 // See backend fenced_code.py:71 for associated regexp
-var fencestr = "^(~{3,}|`{3,})"          + // Opening Fence
-               "[ ]*"                    + // Spaces
-               "("                       +
-                   "\\{?\\.?"            +
-                   "([a-zA-Z0-9_+-]*)"   + // Language
-                   "\\}?"                +
-               "[ ]*"                    + // Spaces
+var fencestr = "^(~{3,}|`{3,})"            + // Opening Fence
+               "[ ]*"                      + // Spaces
+               "("                         +
+                   "\\{?\\.?"              +
+                   "([a-zA-Z0-9_+-./#]*)"  + // Language
+                   "\\}?"                  +
+               "[ ]*"                      + // Spaces
                ")$";
 var fence_re = new RegExp(fencestr);
 
@@ -50,6 +50,16 @@ function wrap_quote(text) {
                                     function (line) { return '> ' + line; }).join('\n'));
     });
     return quoted_paragraphs.join('\n\n');
+}
+
+function wrap_tex(tex) {
+    try {
+        return katex.renderToString(tex, {
+            displayMode: true,
+        });
+    } catch (ex) {
+        return '<span class="tex-error">' + escape_func(tex) + '</span>';
+    }
 }
 
 exports.set_stash_func = function (stash_handler) {
@@ -90,12 +100,34 @@ exports.process_fenced_code = function (content) {
                     },
                 };
             }
+
+            if (lang === 'math' || lang === 'tex' || lang === 'latex') {
+                return {
+                    handle_line: function (line) {
+                        if (line === fence) {
+                            this.done();
+                        } else {
+                            consume_line(lines, line);
+                        }
+                    },
+
+                    done: function () {
+                        var text = wrap_tex(lines.join('\n'));
+                        var placeholder = stash_func(text, true);
+                        output_lines.push('');
+                        output_lines.push(placeholder);
+                        output_lines.push('');
+                        handler_stack.pop();
+                    },
+                };
+            }
+
             return {
                 handle_line: function (line) {
                     if (line === fence) {
                         this.done();
                     } else {
-                        lines.push(line);
+                        lines.push(util.rtrim(line));
                     }
                 },
 

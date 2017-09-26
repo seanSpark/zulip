@@ -2,6 +2,8 @@ class zulip::base {
   include apt
   $base_packages = [ # Accurate time is essential
                      "ntp",
+                     # Used in scripts including install-yarn.sh
+                     "curl",
                      # Used in scripts
                      "netcat",
                      # Nagios plugins; needed to ensure /var/lib/nagios_plugins exists
@@ -39,12 +41,14 @@ class zulip::base {
              'digest_emails',
              'email_mirror',
              'embed_links',
+             'embedded_bots',
              'error_reports',
              'feedback_messages',
              'invites',
              'missedmessage_email_senders',
              'missedmessage_emails',
              'missedmessage_mobile_notifications',
+             'outgoing_webhooks',
              'signups',
              'slow_queries',
              'user_activity',

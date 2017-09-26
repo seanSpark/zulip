@@ -1,9 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 from __future__ import absolute_import
 
 import os
-from os.path import abspath
 import sys
 import subprocess
 import re
@@ -66,7 +65,7 @@ def list_files(targets=[], ftypes=[], use_shebang=True, modified_only=False,
     # sys.argv as str, so that battle is already lost.  Settle for hoping
     # everything is UTF-8.
     repository_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode('utf-8')
-    exclude_abspaths = [os.path.join(repository_root, fpath).rstrip('/') for fpath in exclude]
+    exclude_abspaths = [os.path.normpath(os.path.join(repository_root, fpath)) for fpath in exclude]
 
     cmdline = ['git', 'ls-files'] + targets
     if modified_only:
@@ -76,15 +75,15 @@ def list_files(targets=[], ftypes=[], use_shebang=True, modified_only=False,
     # throw away empty lines and non-files (like symlinks)
     files = list(filter(os.path.isfile, files_gen))
 
-    result_dict = defaultdict(list) # type: Dict[str, List[str]]
-    result_list = [] # type: List[str]
+    result_dict = defaultdict(list)  # type: Dict[str, List[str]]
+    result_list = []  # type: List[str]
 
     for fpath in files:
         # this will take a long time if exclude is very large
         ext = os.path.splitext(fpath)[1]
         if extless_only and ext:
             continue
-        absfpath = abspath(fpath)
+        absfpath = os.path.abspath(fpath)
         if any(absfpath == expath or absfpath.startswith(expath + '/')
                for expath in exclude_abspaths):
             continue

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+import re
 from typing import Any, Dict, Iterable
 import logging
 
@@ -9,7 +10,6 @@ from django.test import override_settings
 from django.template import Template, Context
 from django.template.loader import get_template
 
-from zerver.models import get_user_profile_by_email
 from zerver.lib.test_helpers import get_all_templates
 from zerver.lib.test_classes import (
     ZulipTestCase,
@@ -58,7 +58,8 @@ class TemplateTestCase(ZulipTestCase):
 
         logged_out = [
             'confirmation/confirm.html',  # seems unused
-            'confirmation/confirm_mituser.html',  # seems unused
+            'zerver/compare.html',
+            'zerver/footer.html',
         ]
 
         logged_in = [
@@ -78,20 +79,26 @@ class TemplateTestCase(ZulipTestCase):
             'zerver/settings_sidebar.html',
             'zerver/stream_creation_prompt.html',
             'zerver/subscriptions.html',
-            'zerver/tutorial_finale.html',
             'zerver/message_history.html',
+            'zerver/delete_message.html',
         ]
         unusual = [
-            'confirmation/mituser_confirmation_email_body.txt',
-            'confirmation/mituser_confirmation_email_subject.txt',
-            'confirmation/mituser_invite_email_body.txt',
-            'confirmation/mituser_invite_email_subject.txt',
-            'confirmation/emailchangestatus_confirmation_email.subject',
-            'confirmation/emailchangestatus_confirmation_email.html',
-            'confirmation/emailchangestatus_confirmation_email.txt',
-            'confirmation/notify_change_in_email_subject.txt',
+            'zerver/emails/confirm_new_email.subject',
+            'zerver/emails/confirm_new_email.html',
+            'zerver/emails/confirm_new_email.txt',
+            'zerver/emails/notify_change_in_email.subject',
+            'zerver/emails/notify_change_in_email.html',
+            'zerver/emails/digest.subject',
+            'zerver/emails/digest.html',
+            'zerver/emails/digest.txt',
+            'zerver/emails/followup_day1.subject',
+            'zerver/emails/followup_day1.html',
+            'zerver/emails/followup_day1.txt',
+            'zerver/emails/followup_day2.subject',
+            'zerver/emails/followup_day2.txt',
+            'zerver/emails/followup_day2.html',
+            'zerver/emails/password_reset.html',
             'corporate/mit.html',
-            'corporate/privacy.html',
             'corporate/zephyr.html',
             'corporate/zephyr-mirror.html',
             'pipeline/css.jinja',
@@ -110,9 +117,21 @@ class TemplateTestCase(ZulipTestCase):
             'zerver/base.html',
             'zerver/api_content.json',
             'zerver/handlebars_compilation_failed.html',
+            'zerver/portico-header.html',
         ]
-        skip = covered + defer + logged_out + logged_in + unusual + ['tests/test_markdown.html', 'zerver/terms.html']
-        templates = [t for t in get_all_templates() if t not in skip]
+
+        integrations_regexp = re.compile('zerver/integrations/.*.html')
+
+        # Since static/generated/bots/ is searched by Jinja2 for templates,
+        # it mistakes logo files under that directory for templates.
+        bot_logos_regexp = re.compile('\w+\/logo\.(svg|png)$')
+
+        skip = covered + defer + logged_out + logged_in + unusual + ['tests/test_markdown.html',
+                                                                     'zerver/terms.html',
+                                                                     'zerver/privacy.html']
+
+        templates = [t for t in get_all_templates() if not (
+            t in skip or integrations_regexp.match(t) or bot_logos_regexp.match(t))]
         self.render_templates(templates, self.get_context())
 
         # Test the deferred templates with updated context.
@@ -150,11 +169,11 @@ class TemplateTestCase(ZulipTestCase):
             context.
 
         """
-        email = "hamlet@zulip.com"
-        user_profile = get_user_profile_by_email(email)
+        user_profile = self.example_user('hamlet')
+        email = user_profile.email
 
         context = dict(
-            article="templates/zerver/help/index.md",
+            article="zerver/help/index.md",
             shallow_tested=True,
             user_profile=user_profile,
             user=user_profile,
@@ -177,6 +196,11 @@ class TemplateTestCase(ZulipTestCase):
             messages=[dict(header='Header')],
             new_streams=dict(html=''),
             data=dict(title='Title'),
+            device_info={"device_browser": "Chrome",
+                         "device_os": "Windows",
+                         "device_ip": "127.0.0.1",
+                         "login_time": "9:33am NewYork, NewYork",
+                         },
         )
 
         context.update(kwargs)
@@ -201,3 +225,27 @@ class TemplateTestCase(ZulipTestCase):
         self.assert_in_success_response([u"Thanks for using our products and services (\"Services\"). ",
                                          u"By using our Services, you are agreeing to these terms"],
                                         response)
+
+    def test_custom_terms_of_service_template(self):
+        # type: () -> None
+        not_configured_message = 'This installation of Zulip does not have a configured ' \
+                                 'terms of service'
+        with self.settings(TERMS_OF_SERVICE=None):
+            response = self.client_get('/terms/')
+        self.assert_in_success_response([not_configured_message], response)
+        with self.settings(TERMS_OF_SERVICE='zerver/tests/markdown/test_markdown.md'):
+            response = self.client_get('/terms/')
+        self.assert_in_success_response(['This is some <em>bold text</em>.'], response)
+        self.assert_not_in_success_response([not_configured_message], response)
+
+    def test_custom_privacy_policy_template(self):
+        # type: () -> None
+        not_configured_message = 'This installation of Zulip does not have a configured ' \
+                                 'privacy policy'
+        with self.settings(PRIVACY_POLICY=None):
+            response = self.client_get('/privacy/')
+        self.assert_in_success_response([not_configured_message], response)
+        with self.settings(PRIVACY_POLICY='zerver/tests/markdown/test_markdown.md'):
+            response = self.client_get('/privacy/')
+        self.assert_in_success_response(['This is some <em>bold text</em>.'], response)
+        self.assert_not_in_success_response([not_configured_message], response)

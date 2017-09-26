@@ -1,11 +1,10 @@
 from __future__ import absolute_import
 
 from types import FrameType
-from typing import Any
+from typing import Any, List
 
 from argparse import ArgumentParser
 from django.core.management.base import BaseCommand
-from django.core.management import CommandError
 from django.conf import settings
 from django.utils import autoreload
 from zerver.worker.queue_processors import get_worker, get_active_worker_queues
@@ -23,6 +22,10 @@ class Command(BaseCommand):
                             help="worker label")
         parser.add_argument('--all', dest="all", action="store_true", default=False,
                             help="run all queues")
+        parser.add_argument('--multi_threaded', nargs='+',
+                            metavar='<list of queue name>',
+                            type=str, required=False,
+                            help="list of queue to process")
 
     help = "Runs a queue processing worker"
 
@@ -30,6 +33,15 @@ class Command(BaseCommand):
         # type: (*Any, **Any) -> None
         logging.basicConfig()
         logger = logging.getLogger('process_queue')
+
+        def exit_with_three(signal, frame):
+            # type: (int, FrameType) -> None
+            """
+            This process is watched by Django's autoreload, so exiting
+            with status code 3 will cause this process to restart.
+            """
+            logger.warn("SIGUSR1 received. Restarting this queue processor.")
+            sys.exit(3)
 
         if not settings.USING_RABBITMQ:
             # Make the warning silent when running the tests
@@ -39,19 +51,25 @@ class Command(BaseCommand):
                 logger.error("Cannot run a queue processor when USING_RABBITMQ is False!")
             sys.exit(1)
 
-        def run_threaded_workers(logger):
-            # type: (logging.Logger) -> None
+        def run_threaded_workers(queues, logger):
+            # type: (List[str], logging.Logger) -> None
             cnt = 0
-            for queue_name in get_active_worker_queues():
+            for queue_name in queues:
                 if not settings.DEVELOPMENT:
                     logger.info('launching queue worker thread ' + queue_name)
                 cnt += 1
                 td = Threaded_worker(queue_name)
                 td.start()
+            assert len(queues) == cnt
             logger.info('%d queue worker threads were launched' % (cnt,))
 
         if options['all']:
-            autoreload.main(run_threaded_workers, (logger,))
+            signal.signal(signal.SIGUSR1, exit_with_three)
+            autoreload.main(run_threaded_workers, (get_active_worker_queues(), logger))
+        elif options['multi_threaded']:
+            signal.signal(signal.SIGUSR1, exit_with_three)
+            queues = options['multi_threaded']
+            autoreload.main(run_threaded_workers, (queues, logger))
         else:
             queue_name = options['queue_name']
             worker_num = options['worker_num']
@@ -67,6 +85,7 @@ class Command(BaseCommand):
                 sys.exit(0)
             signal.signal(signal.SIGTERM, signal_handler)
             signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGUSR1, signal_handler)
 
             worker.start()
 

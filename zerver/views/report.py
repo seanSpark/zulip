@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Text
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
@@ -13,8 +13,6 @@ from zerver.lib.utils import statsd, statsd_key
 from zerver.lib.validator import check_bool, check_dict
 from zerver.models import UserProfile
 
-from typing import Optional, Text
-
 import subprocess
 import os
 
@@ -25,8 +23,10 @@ def get_js_source_map():
     # type: () -> Optional[SourceMap]
     global js_source_map
     if not js_source_map and not (settings.DEVELOPMENT or settings.TEST_SUITE):
-        js_source_map = SourceMap(os.path.join(
-            settings.DEPLOY_ROOT, 'prod-static/source-map'))
+        js_source_map = SourceMap([
+            os.path.join(settings.DEPLOY_ROOT, 'prod-static/source-map'),
+            os.path.join(settings.STATIC_ROOT, 'webpack-bundles')
+        ])
     return js_source_map
 
 @authenticated_json_post_view

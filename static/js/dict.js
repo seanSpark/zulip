@@ -116,11 +116,19 @@ Dict.prototype = {
         return _.keys(this._items).length;
     },
 
+    is_empty: function Dict_is_empty() {
+        return _.isEmpty(this._items);
+    },
+
     // Iterates through the Dict calling f(value, key) for each (key, value) pair in the Dict
     each: function Dict_each(f) {
         return _.each(this._items, function (mapping) {
             f(mapping.v, mapping.k);
         });
+    },
+
+    clear: function Dict_clear() {
+        this._items = {};
     },
 };
 

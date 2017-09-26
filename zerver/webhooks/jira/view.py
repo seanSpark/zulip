@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 
-from zerver.models import Client, UserProfile, get_user_profile_by_email, Realm
+from zerver.models import UserProfile, get_user, Realm
 from zerver.lib.actions import check_send_message
 from zerver.lib.response import json_success, json_error
 from zerver.decorator import api_key_only_webhook_view, has_request_variables, REQ
@@ -114,11 +114,11 @@ def get_issue_string(payload, issue_id=None):
     else:
         return issue_id
 
-def get_assignee_mention(assignee_email):
-    # type: (Text) -> Text
+def get_assignee_mention(assignee_email, realm):
+    # type: (Text, Realm) -> Text
     if assignee_email != '':
         try:
-            assignee_name = get_user_profile_by_email(assignee_email).full_name
+            assignee_name = get_user(assignee_email, realm).full_name
         except UserProfile.DoesNotExist:
             assignee_name = assignee_email
         return u"**{}**".format(assignee_name)
@@ -151,7 +151,7 @@ def get_sub_event_for_update_issue(payload):
     return sub_event
 
 def get_event_type(payload):
-    # type: (Dict[str, Any]) -> Text
+    # type: (Dict[str, Any]) -> Optional[Text]
     event = payload.get('webhookEvent')
     if event is None and payload.get('transition'):
         event = 'jira:issue_updated'
@@ -167,15 +167,15 @@ def add_change_info(content, field, from_field, to_field):
     return content
 
 def handle_updated_issue_event(payload, user_profile):
+    # type: (Dict[str, Any], UserProfile) -> Text
     # Reassigned, commented, reopened, and resolved events are all bundled
     # into this one 'updated' event type, so we try to extract the meaningful
     # event that happened
-    # type: (Dict[str, Any], UserProfile) -> Text
     issue_id = get_in(payload, ['issue', 'key'])
     issue = get_issue_string(payload, issue_id)
 
     assignee_email = get_in(payload, ['issue', 'fields', 'assignee', 'emailAddress'], '')
-    assignee_mention = get_assignee_mention(assignee_email)
+    assignee_mention = get_assignee_mention(assignee_email, user_profile.realm)
 
     if assignee_mention != '':
         assignee_blurb = u" (assigned to {})".format(assignee_mention)
@@ -239,10 +239,10 @@ def handle_deleted_issue_event(payload):
 
 @api_key_only_webhook_view("JIRA")
 @has_request_variables
-def api_jira_webhook(request, user_profile, client,
+def api_jira_webhook(request, user_profile,
                      payload=REQ(argument_type='body'),
                      stream=REQ(default='jira')):
-    # type: (HttpRequest, UserProfile, Client, Dict[str, Any], Text) -> HttpResponse
+    # type: (HttpRequest, UserProfile, Dict[str, Any], Text) -> HttpResponse
 
     event = get_event_type(payload)
     if event == 'jira:issue_created':
@@ -265,7 +265,7 @@ def api_jira_webhook(request, user_profile, client,
         else:
             if not settings.TEST_SUITE:
                 logging.warning("Got JIRA event type we don't support: {}".format(event))
-            return json_error(_("Got JIRA event type we don't support: {}".format(event)))
+            return json_success()
 
-    check_send_message(user_profile, client, "stream", [stream], subject, content)
+    check_send_message(user_profile, request.client, "stream", [stream], subject, content)
     return json_success()

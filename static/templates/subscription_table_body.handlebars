@@ -2,7 +2,7 @@
     <div class="flex overlay-content">
         <div class="subscriptions-container">
             <div class="subscriptions-header">
-                <div class="icon-vector-chevron-left"></div>
+                <div class="fa fa-chevron-left"></div>
                 <span class="subscriptions-title">{{t 'Streams' }}</span>
                 <div class="exit">
                     <span class="exit-sign">&times;</span>
@@ -15,7 +15,7 @@
                           placeholder="{{t 'Filter streams' }}" value="" autocomplete="off" />
                         {{#if can_create_streams}}
                         <input type="submit" class=""
-                          id="create_stream_button" value="+" />
+                          id="create_stream_button" value="+" title="{{t 'Create new stream' }} (n)"/>
                         {{/if}}
                         <div class="float-clear"></div>
                     </form>
@@ -36,9 +36,7 @@
                     {{t 'Nothing selected.' }}
                 </div>
                 <div class="settings">
-                    {{#each subscriptions}}
-                    {{ partial "subscription_settings" }}
-                    {{/each}}
+                    {{!-- edit stream here --}}
                 </div>
                 {{ partial "subscription_creation_form" }}
             </div>

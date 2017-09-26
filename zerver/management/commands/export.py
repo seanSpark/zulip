@@ -4,21 +4,19 @@ from __future__ import print_function
 from typing import Any
 
 from argparse import ArgumentParser, RawTextHelpFormatter
-from django.core.management.base import BaseCommand, CommandError
-from django.core.exceptions import ValidationError
+from django.core.management.base import CommandError
 
 import os
 import shutil
 import subprocess
 import tempfile
-import ujson
 
 from zerver.lib.export import (
     do_export_realm, do_write_stats_file_for_realm_export
 )
-from zerver.models import get_realm
+from zerver.lib.management import ZulipBaseCommand
 
-class Command(BaseCommand):
+class Command(ZulipBaseCommand):
     help = """Exports all data from a Zulip realm
 
     This command exports all significant data from a Zulip realm.  The
@@ -31,12 +29,11 @@ class Command(BaseCommand):
       metadata needed to restore them even in the ab
 
     Things that are not exported:
-    * Confirmation, MitUser, and PreregistrationUser (transient tables)
+    * Confirmation and PreregistrationUser (transient tables)
     * Sessions (everyone will need to login again post-export)
     * Users' passwords and API keys (users will need to use SSO or reset password)
     * Mobile tokens for APNS/GCM (users will need to reconnect their mobile devices)
-    * ScheduledJob (Not relevant on a new server)
-    * Referral (Unused)
+    * ScheduledEmail (Not relevant on a new server)
     * Deployment (Unused)
     * third_party_api_results cache (this means rerending all old
       messages could be expensive)
@@ -55,7 +52,7 @@ class Command(BaseCommand):
       will need to direct your integrations at the new server.
       Usually this means updating the URL and the bots' API keys.  You
       can see a list of all the bots that have been configured for
-      your realm on the `/#administration` page, and use that list to
+      your realm on the `/#organization` page, and use that list to
       make sure you migrate them all.
 
     The proper procedure for using this to export a realm is as follows:
@@ -96,8 +93,6 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         # type: (ArgumentParser) -> None
-        parser.add_argument('realm', metavar='<realm>', type=str,
-                            help="realm to export")
         parser.add_argument('--output',
                             dest='output_dir',
                             action="store",
@@ -108,14 +103,11 @@ class Command(BaseCommand):
                             action="store",
                             default=6,
                             help='Threads to use in exporting UserMessage objects in parallel')
+        self.add_realm_args(parser, True)
 
     def handle(self, *args, **options):
         # type: (*Any, **Any) -> None
-        try:
-            realm = get_realm(options["realm"])
-        except ValidationError:
-            raise CommandError("No such realm.")
-
+        realm = self.get_realm(options)
         output_dir = options["output_dir"]
         if output_dir is None:
             output_dir = tempfile.mkdtemp(prefix="/tmp/zulip-export-")

@@ -5,14 +5,14 @@ help you decide how to correctly implement new settings you're adding
 to Zulip.  We have two types of administrative settings in Zulip:
 server settings (which are set via configuration files are apply to
 the whole Zulip installation), and realm settings (which are usually
-set via the /#administration page in the Zulip web application) and
+set via the /#organization page in the Zulip web application) and
 apply to a single Zulip realm/organization (which for most Zulip
 servers is the only realm on the server).
 
 Philosophically, the goals of the settings system are to make it
 convenient for:
 
-* Zulip server administrations to configure
+* Zulip server administrators to configure
 Zulip's featureset for their server without needing to patch Zulip
 * Realm administrators to configure settings for their organization
 independently without needing to talk with the server administrator.
@@ -43,12 +43,12 @@ $ ./scripts/get-django-setting EMAIL_GATEWAY_PATTERN
 Zulip has separated those settings that we expect a system
 administrator to change (with nice documentation) from the ~1000 lines
 of settings needed by the Zulip Django app.  As a result, there are a
-few files involved in the Zulip settings for server administrations.
+few files involved in the Zulip settings for server administrators.
 In a production environment, we have:
 
 * `/etc/zulip/settings.py` (the template is in the Zulip repo at
   `zproject/prod_settings_template.py`) is the main system
-  administration facing settings file for Zulip.  It contains all the
+  administrator-facing settings file for Zulip.  It contains all the
   server-specific settings, such as how to send outgoing email, the
   hostname of the Postgres database, etc., but does not contain any
   secrets (e.g. passwords, secret API keys, cryptographic keys, etc.).
@@ -107,6 +107,47 @@ Most settings should be enabled in the development environment, to
 maximize convenience of testing all of Zulip's features; they should
 be enabled by default in production if we expect most Zulip sites to
 want those settings.
+
+#### Testing Google & GitHub authentication
+
+In order to set up Google or GitHub authentication in the development
+environment, you'll have to go through the steps detailed in
+`prod_settings_template.py` with some changes. Here is the full
+procedure:
+
+##### Google
+
+* Visit https://console.developers.google.com, click on Credentials on
+the left sidebar and create a Oauth2 client ID that allows redirects
+to `https://localhost:9991/accounts/login/google/done/`.
+
+* Go to the Library (left sidebar), then under "Social APIs" click on
+"Google+ API" and click the button to enable the API.
+
+* Uncomment `'zproject.backends.GoogleMobileOauth2Backend'` in
+`AUTHENTICATION_BACKENDS` in `dev_settings.py`.
+
+* Uncomment `GOOGLE_OAUTH2_CLIENT_ID` in `prod_settings_template.py` &
+assign it the Client ID you got from Google.
+
+* Put the Client Secret you got from Google as
+`google_oauth2_client_secret` in `dev-secrets.conf`.
+
+##### GitHub
+
+* Register an OAuth2 application with GitHub at one of
+https://github.com/settings/developers or
+https://github.com/organizations/ORGNAME/settings/developers.
+Specify `http://localhost:9991/complete/github/` as the callback URL.
+
+* Uncomment `'zproject.backends.GitHubAuthBackend'` in
+`AUTHENTICATION_BACKENDS` in `dev_settings.py`.
+
+* Uncomment `SOCIAL_AUTH_GITHUB_KEY` in `prod_settings_template.py` &
+assign it the Client ID you got from GitHub.
+
+* Put the Client Secret you got from GitHub as
+`social_auth_github_secret` in `dev-secrets.conf`.
 
 #### Testing non-default settings
 

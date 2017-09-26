@@ -14,9 +14,6 @@ import zerver.views.muting
 
 legacy_urls = [
     # These are json format views used by the web client.  They require a logged in browser.
-    url(r'^json/invite_users$', zerver.views.invite.json_invite_users),
-    url(r'^json/refer_friend$', zerver.views.invite.json_refer_friend),
-    url(r'^json/settings/change$', zerver.views.user_settings.json_change_settings),
 
     # We should remove this endpoint and all code related to it.
     # It returns a 404 if the stream doesn't exist, which is confusing
@@ -25,14 +22,15 @@ legacy_urls = [
     # pushed to us via the event system.
     url(r'^json/subscriptions/exists$', zerver.views.streams.json_stream_exists),
 
-    url(r'^json/subscriptions/property$', zerver.views.streams.json_subscription_property),
     url(r'^json/fetch_api_key$', zerver.views.auth.json_fetch_api_key),
+    # This old-style tutorial is due to be eliminated soon.
     url(r'^json/tutorial_send_message$', zerver.views.tutorial.json_tutorial_send_message),
     url(r'^json/tutorial_status$', zerver.views.tutorial.json_tutorial_status),
+    # A version of these reporting views may make sense to support in
+    # the API for getting mobile analytics, but we may want something
+    # totally different.
     url(r'^json/report_error$', zerver.views.report.json_report_error),
     url(r'^json/report_send_time$', zerver.views.report.json_report_send_time),
     url(r'^json/report_narrow_time$', zerver.views.report.json_report_narrow_time),
     url(r'^json/report_unnarrow_time$', zerver.views.report.json_report_unnarrow_time),
-    url(r'^json/upload_file$', zerver.views.upload.json_upload_file),
-    url(r'^json/messages_in_narrow$', zerver.views.messages.json_messages_in_narrow),
 ]

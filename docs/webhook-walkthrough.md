@@ -13,7 +13,7 @@ integration.
 The first step in creating a webhook is to examine the data that the
 service you want to integrate will be sending to Zulip.
 
-You can use [requestb.in](http://requestb.in/) or a similar tool to capture
+You can use <http://requestb.in> or a similar tool to capture
 webhook payload(s) from the service you are integrating. Examining this
 data allows you to do two things:
 
@@ -26,7 +26,7 @@ Fixtures enable the testing of webhook integration code without the need to
 actually contact the service being integrated.
 
 Because `Hello World` is a very simple webhook that does one thing, it requires
-only one fixture, `zerver/fixtures/helloworld/helloworld_hello.json`:
+only one fixture, `zerver/webhooks/helloworld/fixtures/hello.json`:
 
 ```
 {
@@ -72,29 +72,25 @@ from typing import Dict, Any, Iterable, Optional, Text
 
 @api_key_only_webhook_view('HelloWorld')
 @has_request_variables
-def api_helloworld_webhook(request, user_profile, client,
+def api_helloworld_webhook(request, user_profile,
                            payload=REQ(argument_type='body'),
                            stream=REQ(default='test'),
                            topic=REQ(default='Hello World')):
-    # type: (HttpRequest, UserProfile, Client, Dict[str, Iterable[Dict[str, Any]]], Text, Optional[Text]) -> HttpResponse
+    # type: (HttpRequest, UserProfile, Dict[str, Iterable[Dict[str, Any]]], Text, Optional[Text]) -> HttpResponse
 
-  # construct the body of the message
-  body = 'Hello! I am happy to be here! :smile:'
+    # construct the body of the message
+    body = 'Hello! I am happy to be here! :smile:'
 
-  # try to add the Wikipedia article of the day
-  # return appropriate error if not successful
-  try:
-      body_template = '\nThe Wikipedia featured article for today is **[{featured_title}]({featured_url})**'
-      body += body_template.format(**payload)
-  except KeyError as e:
-      return json_error(_("Missing key {} in JSON").format(str(e)))
+    # try to add the Wikipedia article of the day
+    body_template = '\nThe Wikipedia featured article for today is **[{featured_title}]({featured_url})**'
+    body += body_template.format(**payload)
 
-  # send the message
-  check_send_message(user_profile, client, 'stream', [stream], topic, body)
+    # send the message
+    check_send_message(user_profile, request.client, 'stream',
+                       [stream], topic, body)
 
-  # return json result
-  return json_success()
-
+    # return json result
+    return json_success()
 ```
 
 The above code imports the required functions and defines the main webhook
@@ -104,10 +100,11 @@ access request variables with `REQ()`. You can find more about `REQ` and request
 variables in [Writing views](writing-views.html#request-variables).
 
 You must pass the name of your webhook to the `api_key_only_webhook_view`
-decorator so your webhook can access the `user_profile` and `client` fields
-from the request. Here we have used `HelloWorld`. To be consistent with Zulip code
-style, use the name of the product you are integrating in camel case, spelled
-as the product spells its own name (except always first letter upper-case).
+decorator so your webhook can access the `user_profile` and `request.client`
+(Zulip's analogue of UserAgent) fields from the request. Here we have used
+`HelloWorld`. To be consistent with Zulip code style, use the name of the
+product you are integrating in camel case, spelled as the product spells
+its own name (except always first letter upper-case).
 
 The `api_key_only_webhook_view` decorator indicates that the 3rd party service will
 send the authorization as an API key in the query parameters. If your service uses
@@ -119,9 +116,8 @@ You should name your webhook function as such `api_webhookname_webhook` where
 
 At minimum, the webhook function must accept `request` (Django
 [HttpRequest](https://docs.djangoproject.com/en/1.8/ref/request-response/#django.http.HttpRequest)
-object), `user_profile` (Zulip's user object), and `client` (Zulip's analogue
-of UserAgent). You may also want to define additional parameters using the
-`REQ` object.
+object), and `user_profile` (Zulip's user object). You may also want to
+define additional parameters using the `REQ` object.
 
 In the example above, we have defined `payload` which is populated
 from the body of the http request, `stream` with a default of `test`
@@ -136,10 +132,11 @@ functions.
 
 In the body of the function we define the body of the message as `Hello! I am
 happy to be here! :smile:`. The `:smile:` indicates an emoji. Then we append a
-link to the Wikipedia article of the day as provided by the json payload. If
-the json payload does not include data for `featured_title` and `featured_url`
-we catch a `KeyError` and use `json_error` to return the appropriate
-information: a 400 http status code with relevant details.
+link to the Wikipedia article of the day as provided by the json payload.
+
+* Sometimes, it might occur that a json payload does not contain all required keys your
+  integration checks for. In such a case, any `KeyError` thrown is handled by the server
+  backend and will create an appropriate response.
 
 Then we send a public (stream) message with `check_send_message` which will
 validate the message and then send it.
@@ -161,7 +158,7 @@ WEBHOOK_INTEGRATIONS = [
 And you'll find the entry for Hello World:
 
 ```
-  WebhookIntegration('helloworld', display_name='Hello World'),
+  WebhookIntegration('helloworld', ['misc'], display_name='Hello World'),
 ```
 
 This tells the Zulip api to call the `api_helloworld_webhook` function in
@@ -170,7 +167,8 @@ This tells the Zulip api to call the `api_helloworld_webhook` function in
 
 This line also tells Zulip to generate an entry for Hello World on the Zulip
 integrations page using `static/images/integrations/logos/helloworld.png` as its
-icon.
+icon. The second positional argument defines a list of categories for the
+integration.
 
 At this point, if you're following along and/or writing your own Hello World
 webhook, you have written enough code to test your integration.
@@ -187,7 +185,7 @@ Using `manage.py` from within the Zulip development environment:
 ```
 (zulip-venv)vagrant@vagrant-ubuntu-trusty-64:/srv/zulip$
 ./manage.py send_webhook_fixture_message \
-> --fixture=zerver/fixtures/helloworld/helloworld_hello.json \
+> --fixture=zerver/webhooks/helloworld/fixtures/hello.json \
 > '--url=http://localhost:9991/api/v1/external/helloworld?api_key=<api_key>'
 ```
 After which you should see something similar to:
@@ -282,8 +280,8 @@ class called something like `test_goodbye_message`:
                                           content_type="application/x-www-form-urlencoded")
 ```
 
-As well as a new fixture `helloworld_goodbye.json` in
-`zerver/fixtures/helloworld/`:
+As well as a new fixture `goodbye.json` in
+`zerver/webhooks/helloworld/fixtures/`:
 
 ```
 {
@@ -319,8 +317,7 @@ DONE!
 ## Step 5: Create documentation
 
 Next, we add end-user documentation for our webhook integration.  You
-can see the existing examples at
-[https://zulipchat.com/integrations](https://zulipchat.com/integrations)
+can see the existing examples at <https://zulipchat.com/integrations>
 or by accessing `/integrations` in your Zulip development environment.
 
 There are two parts to the end-user documentation on this page.
@@ -328,51 +325,50 @@ There are two parts to the end-user documentation on this page.
 The first is the lozenge in the grid of integrations, showing your
 integration logo and name, which links to the full documentation.
 This is generated automatically once you've registered the integration
-in WEBHOOK_INTEGRATIONS in `zerver/lib/integrations.py`, and supports
+in `WEBHOOK_INTEGRATIONS` in `zerver/lib/integrations.py`, and supports
 some customization via options to the `WebhookIntegration` class.
 
 Second, you need to write the actual documentation content in
-`zerver/webhooks/mywebhook/doc.html`.
+`zerver/webhooks/mywebhook/doc.md`.
 
 ```
-<p>Learn how Zulip integrations work with this simple Hello World example!</p>
+Learn how Zulip integrations work with this simple Hello World example!
 
-<p>
-    The Hello World webhook will use the <code>test</code> stream, which is
-    created by default in the Zulip development environment. If you are running
-    Zulip in production, you should make sure this stream exists.
-</p>
+The Hello World webhook will use the `test` stream, which is
+created by default in the Zulip dev environment. If you are running
+Zulip in production, you should make sure that this stream exists.
 
-<p>
-    Next, on your {{ settings_html|safe }}, create a Hello World bot. Construct the
-    URL for the Hello World bot using the API key and stream name:
-    <code>{{ external_api_uri_subdomain }}/v1/external/helloworld?api_key=abcdefgh&amp;stream=test</code>
-</p>
+Next, on your {{ settings_html|safe }}, create a Hello World bot.
+Construct the URL for the Hello World bot using the API key and
+stream name:
 
-<p>
-    To trigger a notication using this webhook, use `send_webhook_fixture_message`
-    from the Zulip command line:
-</p>
-<div class="codehilite">
-      <pre>(zulip-venv)vagrant@vagrant-ubuntu-trusty-64:/srv/zulip$
-./manage.py send_webhook_fixture_message \
-> --fixture=zerver/fixtures/helloworld/helloworld_hello.json \
-> '--url=http://localhost:9991/api/v1/external/helloworld?api_key=&lt;api_key&gt;'
-      </pre>
-</div>
+`{{ external_api_uri_subdomain }}/v1/external/helloworld?api_key=abcdefgh&stream=test`
 
-<p>Or, use curl:</p>
-<div class="codehilite">
-    <pre>curl -X POST -H "Content-Type: application/json" -d '{ "featured_title":"Marilyn Monroe", "featured_url":"https://en.wikipedia.org/wiki/Marilyn_Monroe" }' http://localhost:9991/api/v1/external/helloworld\?api_key\=&lt;api_key&gt;</pre>
-</div>
 
-<p><b>Congratulations! You're done!</b><br/> Your messages may look like:</p>
+To trigger a notification using this webhook, use
+`send_webhook_fixture_message` from the Zulip command line:
 
-<img class="screenshot" src="/static/images/integrations/helloworld/001.png"/>
+    (zulip-venv)vagrant@vagrant-ubuntu-trusty-64:/srv/zulip$
+    ./manage.py send_webhook_fixture_message \
+    > --fixture=zerver/fixtures/helloworld/hello.json \
+    > '--url=http://localhost:9991/api/v1/external/helloworld?api_key=&lt;api_key&gt;'
+
+Or, use curl:
+
+    curl -X POST -H "Content-Type: application/json" -d '{ "featured_title":"Marilyn Monroe", "featured_url":"https://en.wikipedia.org/wiki/Marilyn_Monroe" }' http://localhost:9991/api/v1/external/helloworld\?api_key\=&lt;api_key&gt;
+
+{!congrats.md!}
+
+![](/static/images/integrations/helloworld/001.png)
+
 ```
 
-See [Documenting your integration](integration-guide.html#documenting-your-integration) for further
-details, including how to easily create the message screenshot.
+`{!congrats.md!}` is an example of a Markdown macro. Zulip has a macro-based
+Markdown/Jinja2 framework that includes macros for common instructions in
+Zulip's webhooks/integrations documentation.
+
+See [Documenting your integration](integration-guide.html#documenting-your-integration)
+for further details, including how to easily create the message screenshot.
 
 ## Step 5: Preparing a pull request to zulip/zulip
 
@@ -425,7 +421,7 @@ def test_unknown_action_no_data(self):
     # return if no params are sent. The fixture for this test is an empty file.
 
     # subscribe to the target stream
-    self.subscribe_to_stream(self.TEST_USER_EMAIL, self.STREAM_NAME)
+    self.subscribe(self.test_user, self.STREAM_NAME)
 
     # post to the webhook url
     post_params = {'stream_name': self.STREAM_NAME,
@@ -477,32 +473,24 @@ http://myhost/api/v1/external/querytest?api_key=abcdefgh&stream=alerts&topic=que
 It provides values for `stream` and `topic`, and the webhook can get those
 using `REQ` without any special handling. How does this work in a test?
 
-The new attribute `TOPIC` exists only in our class, so the default version of
-`build_webhook_url` from `WebhookTestCase` doesn't know how to use it to
-construct the URL. Instead, we provide a custom `build_webhook_url` to
-override the default one:
+The new attribute `TOPIC` exists only in our class so far. In order to
+construct a URL with a query parameter for `topic`, you can pass the
+attribute `TOPIC` as a keyword argument to `build_webhook_url`, like so:
 
 ```
 class QuerytestHookTests(WebhookTestCase):
 
     STREAM_NAME = 'querytest'
     TOPIC = "Default Topic"
-    URL_TEMPLATE = "/api/v1/external/querytest?api_key={api_key}&stream={stream}&topic={topic}"
+    URL_TEMPLATE = "/api/v1/external/querytest?api_key={api_key}&stream={stream}"
     FIXTURE_DIR_NAME = 'querytest'
-
-    # override the base class behavior so we can include TOPIC
-    def build_webhook_url(self):
-        # type: () -> Text
-
-        api_key = self.get_api_key(self.TEST_USER_EMAIL)
-        return self.URL_TEMPLATE.format(stream=self.STREAM_NAME, api_key=api_key, topic=self.TOPIC)
 
     def test_querytest_test_one(self):
         # type: () -> None
 
         # construct the URL used for this test
         self.TOPIC = u"Query Test"
-        self.url = self.build_webhook_url()
+        self.url = self.build_webhook_url(topic=self.TOPIC)
 
         # define the expected message contents
         expected_subject = u"Query Test"

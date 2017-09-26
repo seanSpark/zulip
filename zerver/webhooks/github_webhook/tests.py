@@ -23,15 +23,80 @@ class GithubWebhookTest(WebhookTestCase):
         expected_message = u"GitHub webhook has been successfully configured by TomaszKolek"
         self.send_and_test_stream_message('ping', self.EXPECTED_SUBJECT_REPO_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='ping')
 
+    def test_ping_organization_event(self):
+        # type: () -> None
+        expected_message = u"GitHub webhook has been successfully configured by eeshangarg"
+        self.send_and_test_stream_message('ping_organization', 'zulip-test-org', expected_message, HTTP_X_GITHUB_EVENT='ping')
+
+    def test_push_delete_branch(self):
+        # type: () -> None
+        expected_message = u"eeshangarg [deleted](https://github.com/eeshangarg/public-repo/compare/2e8cf535fb38...000000000000) the branch feature."
+        self.send_and_test_stream_message('push_delete_branch', u"public-repo / feature", expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_local_branch_without_commits(self):
+        # type: () -> None
+        expected_message = u"eeshangarg [pushed](https://github.com/eeshangarg/public-repo/compare/feature) the branch feature."
+        self.send_and_test_stream_message('push_local_branch_without_commits', u"public-repo / feature", expected_message, HTTP_X_GITHUB_EVENT='push')
+
     def test_push_1_commit(self):
         # type: () -> None
-        expected_message = u"baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) to branch changes\n\n* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))"
+        expected_message = u"baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 1 commit to branch changes.\n\n* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))"
         self.send_and_test_stream_message('push_1_commit', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_1_commit_without_username(self):
+        # type: () -> None
+        expected_message = u"eeshangarg [pushed](https://github.com/eeshangarg/public-repo/compare/0383613da871...2e8cf535fb38) 1 commit to branch changes. Commits by John Snow (1).\n\n* Update the README ([2e8cf53](https://github.com/eeshangarg/public-repo/commit/2e8cf535fb38a3dab2476cdf856efda904ad4c94))"
+        self.send_and_test_stream_message('push_1_commit_without_username', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_1_commit_filtered_by_branches(self):
+        # type: () -> None
+        self.url = self.build_webhook_url('master,changes')
+        expected_message = u"baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 1 commit to branch changes.\n\n* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))"
+        self.send_and_test_stream_message('push_1_commit', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_multiple_comitters(self):
+        # type: () -> None
+        commits_info = u'* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))\n'
+        expected_message = u"""baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 6 commits to branch changes. Commits by Tomasz (3), Ben (2) and baxterthehacker (1).\n\n{}* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))""".format(commits_info * 5)
+
+        self.send_and_test_stream_message('push_multiple_committers', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_multiple_comitters_with_others(self):
+        # type: () -> None
+        commits_info = u'* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))\n'
+        expected_message = u"""baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 10 commits to branch changes. Commits by Tomasz (4), Ben (3), James (2) and others (1).\n\n{}* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))""".format(commits_info * 9)
+
+        self.send_and_test_stream_message('push_multiple_committers_with_others', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_multiple_comitters_filtered_by_branches(self):
+        # type: () -> None
+        self.url = self.build_webhook_url('master,changes')
+        commits_info = u'* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))\n'
+        expected_message = u"""baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 6 commits to branch changes. Commits by Tomasz (3), Ben (2) and baxterthehacker (1).\n\n{}* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))""".format(commits_info * 5)
+
+        self.send_and_test_stream_message('push_multiple_committers', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_multiple_comitters_with_others_filtered_by_branches(self):
+        # type: () -> None
+        self.url = self.build_webhook_url('master,changes')
+        commits_info = u'* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))\n'
+        expected_message = u"""baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 10 commits to branch changes. Commits by Tomasz (4), Ben (3), James (2) and others (1).\n\n{}* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))""".format(commits_info * 9)
+
+        self.send_and_test_stream_message('push_multiple_committers_with_others', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
 
     def test_push_50_commits(self):
         # type: () -> None
         commit_info = "* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))\n"
-        expected_message = u"baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) to branch changes\n\n{}[and 30 more commit(s)]".format(
+        expected_message = u"baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 50 commits to branch changes.\n\n{}[and 30 more commit(s)]".format(
+            commit_info * COMMITS_LIMIT
+        )
+        self.send_and_test_stream_message('push_50_commits', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
+
+    def test_push_50_commits_filtered_by_branches(self):
+        # type: () -> None
+        self.url = self.build_webhook_url(branches='master,changes')
+        commit_info = "* Update README.md ([0d1a26e](https://github.com/baxterthehacker/public-repo/commit/0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c))\n"
+        expected_message = u"baxterthehacker [pushed](https://github.com/baxterthehacker/public-repo/compare/9049f1265b7d...0d1a26e67d8f) 50 commits to branch changes.\n\n{}[and 30 more commit(s)]".format(
             commit_info * COMMITS_LIMIT
         )
         self.send_and_test_stream_message('push_50_commits', self.EXPECTED_SUBJECT_BRANCH_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='push')
@@ -74,7 +139,7 @@ class GithubWebhookTest(WebhookTestCase):
     def test_issue_msg(self):
         # type: () -> None
         expected_message = u"baxterthehacker opened [Issue #2](https://github.com/baxterthehacker/public-repo/issues/2)\n\n~~~ quote\nIt looks like you accidently spelled 'commit' with two 't's.\n~~~"
-        self.send_and_test_stream_message('issue', self.EXPECTED_SUBJECT_ISSUE_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='issue')
+        self.send_and_test_stream_message('issue', self.EXPECTED_SUBJECT_ISSUE_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='issues')
 
     def test_membership_msg(self):
         # type: () -> None
@@ -143,7 +208,7 @@ class GithubWebhookTest(WebhookTestCase):
 
     def test_status_msg(self):
         # type: () -> None
-        expected_message = u"[9049f12](https://github.com/baxterthehacker/public-repo/commit/9049f1265b7d61be4a8904a9a27120d2064dab3b) changed it's status to success"
+        expected_message = u"[9049f12](https://github.com/baxterthehacker/public-repo/commit/9049f1265b7d61be4a8904a9a27120d2064dab3b) changed its status to success"
         self.send_and_test_stream_message('status', self.EXPECTED_SUBJECT_REPO_EVENTS, expected_message, HTTP_X_GITHUB_EVENT='status')
 
     def test_pull_request_review_msg(self):
@@ -175,9 +240,13 @@ class GithubWebhookTest(WebhookTestCase):
 
     def test_pull_request_unassigned_msg(self):
         # type: () -> None
-        expected_message = u"baxterthehacker unassigned [PR](https://github.com/baxterthehacker/public-repo/pull/1)"
-        self.send_and_test_stream_message('unassigned_pull_request', self.EXPECTED_SUBJECT_PR_EVENTS, expected_message,
-                                          HTTP_X_GITHUB_EVENT='pull_request')
+        expected_message = u"eeshangarg unassigned [PR](https://github.com/zulip-test-org/helloworld/pull/1)"
+        self.send_and_test_stream_message(
+            'unassigned_pull_request',
+            'helloworld / PR #1 Mention that Zulip rocks!',
+            expected_message,
+            HTTP_X_GITHUB_EVENT='pull_request'
+        )
 
     @patch('zerver.webhooks.github_webhook.view.check_send_message')
     def test_pull_request_labeled_ignore(self, check_send_message_mock):
@@ -208,5 +277,41 @@ class GithubWebhookTest(WebhookTestCase):
         # type: (MagicMock) -> None
         payload = self.get_body('request_review_removed_pull_request')
         result = self.client_post(self.url, payload, HTTP_X_GITHUB_EVENT='pull_request', content_type="application/json")
+        self.assertFalse(check_send_message_mock.called)
+        self.assert_json_success(result)
+
+    @patch('zerver.webhooks.github_webhook.view.check_send_message')
+    def test_push_1_commit_filtered_by_branches_ignore(self, check_send_message_mock):
+        # type: (MagicMock) -> None
+        self.url = self.build_webhook_url(branches='master,development')
+        payload = self.get_body('push_1_commit')
+        result = self.client_post(self.url, payload, HTTP_X_GITHUB_EVENT='push', content_type="application/json")
+        self.assertFalse(check_send_message_mock.called)
+        self.assert_json_success(result)
+
+    @patch('zerver.webhooks.github_webhook.view.check_send_message')
+    def test_push_50_commits_filtered_by_branches_ignore(self, check_send_message_mock):
+        # type: (MagicMock) -> None
+        self.url = self.build_webhook_url(branches='master,development')
+        payload = self.get_body('push_50_commits')
+        result = self.client_post(self.url, payload, HTTP_X_GITHUB_EVENT='push', content_type="application/json")
+        self.assertFalse(check_send_message_mock.called)
+        self.assert_json_success(result)
+
+    @patch('zerver.webhooks.github_webhook.view.check_send_message')
+    def test_push_multiple_comitters_filtered_by_branches_ignore(self, check_send_message_mock):
+        # type: (MagicMock) -> None
+        self.url = self.build_webhook_url(branches='master,development')
+        payload = self.get_body('push_multiple_committers')
+        result = self.client_post(self.url, payload, HTTP_X_GITHUB_EVENT='push', content_type="application/json")
+        self.assertFalse(check_send_message_mock.called)
+        self.assert_json_success(result)
+
+    @patch('zerver.webhooks.github_webhook.view.check_send_message')
+    def test_push_multiple_comitters_with_others_filtered_by_branches_ignore(self, check_send_message_mock):
+        # type: (MagicMock) -> None
+        self.url = self.build_webhook_url(branches='master,development')
+        payload = self.get_body('push_multiple_committers_with_others')
+        result = self.client_post(self.url, payload, HTTP_X_GITHUB_EVENT='push', content_type="application/json")
         self.assertFalse(check_send_message_mock.called)
         self.assert_json_success(result)

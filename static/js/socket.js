@@ -32,12 +32,6 @@ function Socket(url) {
         that._try_to_reconnect({reason: 'unsuspend'});
     });
 
-    // Notify any listeners that we've restored these requests from localstorage
-    // Listeners may mutate request objects in this list to affect re-send behaviour
-    if (Object.keys(this._requests).length !== 0) {
-        $(document).trigger('socket_loaded_requests.zulip', {requests: this._requests});
-    }
-
     this._supported_protocols = ['websocket', 'xdr-streaming', 'xhr-streaming',
                                  'xdr-polling', 'xhr-polling', 'jsonp-polling'];
     if (page_params.test_suite) {
@@ -69,9 +63,7 @@ Socket.prototype = {
     // browser restarts if a restart takes place before a message
     // is successfully transmitted.
     // If that is the case, the success/error callbacks will not
-    // be automatically called. They can be re-added by modifying
-    // the loaded-from-localStorage request in the payload of
-    // the socket_loaded_requests.zulip event.
+    // be automatically called.
     send: function Socket__send(msg, success, error) {
         var request = this._make_request('request');
         request.msg = msg;
@@ -88,7 +80,7 @@ Socket.prototype = {
     },
 
     _get_next_req_id: function Socket__get_next_req_id() {
-        var req_id = page_params.event_queue_id + ':' + this._next_req_id_counter;
+        var req_id = page_params.queue_id + ':' + this._next_req_id_counter;
         this._next_req_id_counter += 1;
         return req_id;
     },
@@ -214,7 +206,7 @@ Socket.prototype = {
             $(function () {
                 var request = that._make_request('auth');
                 request.msg = {csrf_token: csrf_token,
-                               queue_id: page_params.event_queue_id,
+                               queue_id: page_params.queue_id,
                                status_inquiries: _.keys(that._requests)};
                 request.success = function (resp) {
                   that._is_authenticated = true;

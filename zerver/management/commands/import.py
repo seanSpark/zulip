@@ -1,24 +1,19 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from optparse import make_option
-
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandParser
-from django.db import connection
 from django.conf import settings
 
 from zerver.models import Realm, Stream, UserProfile, Recipient, Subscription, \
-    Message, UserMessage, Huddle, DefaultStream, RealmAlias, RealmFilter, Client
+    Message, UserMessage, Huddle, DefaultStream, RealmDomain, RealmFilter, Client
 from zerver.lib.export import do_import_realm
 
 import os
 import subprocess
-import sys
-import ujson
 
 from typing import Any
-Model = Any # TODO: make this mypy type more specific
+Model = Any  # TODO: make this mypy type more specific
 
 class Command(BaseCommand):
     help = """Import Zulip database dump files into a fresh Zulip instance.
@@ -59,7 +54,7 @@ Usage: ./manage.py import [--destroy-rebuild-database] [--import-into-nonempty] 
     def handle(self, *args, **options):
         # type: (*Any, **Any) -> None
         models_to_import = [Realm, Stream, UserProfile, Recipient, Subscription,
-                            Client, Message, UserMessage, Huddle, DefaultStream, RealmAlias,
+                            Client, Message, UserMessage, Huddle, DefaultStream, RealmDomain,
                             RealmFilter]
 
         if len(args) == 0:

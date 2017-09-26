@@ -1,10 +1,12 @@
+from typing import Dict, Optional, Any, List
+import os
+
 from django.conf import settings
-from django.template import Library
+from django.template import Library, loader, engines
 from django.utils.safestring import mark_safe
 from django.utils.lru_cache import lru_cache
 
 from zerver.lib.utils import force_text
-from typing import List
 import zerver.lib.bugdown.fenced_code
 
 import markdown
@@ -54,10 +56,9 @@ def display_list(values, display_limit):
 
 md_extensions = None
 
-@lru_cache(512 if settings.PRODUCTION else 0)
 @register.filter(name='render_markdown_path', is_safe=True)
-def render_markdown_path(markdown_file_path):
-    # type: (str) -> str
+def render_markdown_path(markdown_file_path, context=None):
+    # type: (str, Optional[Dict[Any, Any]]) -> str
     """Given a path to a markdown file, return the rendered html.
 
     Note that this assumes that any HTML in the markdown file is
@@ -78,6 +79,27 @@ def render_markdown_path(markdown_file_path):
     md_engine = markdown.Markdown(extensions=md_extensions)
     md_engine.reset()
 
-    markdown_string = force_text(open(markdown_file_path).read())
+    if context is None:
+        context = {}
+
+    if context.get('integrations_dict') is not None:
+        integration_dir = None
+        if markdown_file_path.endswith('doc.md'):
+            integration_dir = os.path.basename(os.path.dirname(markdown_file_path))
+        elif 'integrations' in markdown_file_path.split('/'):
+            integration_dir = os.path.splitext(os.path.basename(markdown_file_path))[0]
+
+        integration = context['integrations_dict'][integration_dir]
+
+        context['integration_name'] = integration.name
+        context['integration_display_name'] = integration.display_name
+        if hasattr(integration, 'stream_name'):
+            context['recommended_stream_name'] = integration.stream_name
+        if hasattr(integration, 'url'):
+            context['integration_url'] = integration.url[3:]
+
+    jinja = engines['Jinja2']
+    markdown_string = jinja.env.loader.get_source(jinja.env, markdown_file_path)[0]
     html = md_engine.convert(markdown_string)
-    return mark_safe(html)
+    html_template = jinja.from_string(html)
+    return mark_safe(html_template.render(context))

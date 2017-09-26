@@ -10,7 +10,7 @@ from typing import Any, Dict
 from zerver.lib.initial_password import initial_password
 from zerver.lib.sessions import get_session_dict_user
 from zerver.lib.test_classes import ZulipTestCase
-from zerver.models import get_user_profile_by_email
+from zerver.models import get_realm, get_user, UserProfile
 
 class ChangeSettingsTest(ZulipTestCase):
 
@@ -22,130 +22,124 @@ class ChangeSettingsTest(ZulipTestCase):
     # are converted into check_for_toggle_param_patch.
     def check_for_toggle_param(self, pattern, param):
         # type: (str, str) -> None
-        self.login("hamlet@zulip.com")
-        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        self.login(self.example_email("hamlet"))
+        user_profile = self.example_user('hamlet')
         json_result = self.client_post(pattern,
                                        {param: ujson.dumps(True)})
         self.assert_json_success(json_result)
         # refetch user_profile object to correctly handle caching
-        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        user_profile = self.example_user('hamlet')
         self.assertEqual(getattr(user_profile, param), True)
 
         json_result = self.client_post(pattern,
                                        {param: ujson.dumps(False)})
         self.assert_json_success(json_result)
         # refetch user_profile object to correctly handle caching
-        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        user_profile = self.example_user('hamlet')
         self.assertEqual(getattr(user_profile, param), False)
 
     # TODO: requires method consolidation, right now, there's no alternative
     # for check_for_toggle_param for PATCH.
     def check_for_toggle_param_patch(self, pattern, param):
         # type: (str, str) -> None
-        self.login("hamlet@zulip.com")
-        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        self.login(self.example_email("hamlet"))
+        user_profile = self.example_user('hamlet')
         json_result = self.client_patch(pattern,
                                         {param: ujson.dumps(True)})
         self.assert_json_success(json_result)
         # refetch user_profile object to correctly handle caching
-        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        user_profile = self.example_user('hamlet')
         self.assertEqual(getattr(user_profile, param), True)
 
         json_result = self.client_patch(pattern,
                                         {param: ujson.dumps(False)})
         self.assert_json_success(json_result)
         # refetch user_profile object to correctly handle caching
-        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        user_profile = self.example_user('hamlet')
         self.assertEqual(getattr(user_profile, param), False)
 
     def test_successful_change_settings(self):
         # type: () -> None
         """
-        A call to /json/settings/change with valid parameters changes the user's
+        A call to /json/settings with valid parameters changes the user's
         settings correctly and returns correct values.
         """
-        self.login("hamlet@zulip.com")
-        json_result = self.client_post(
-            "/json/settings/change",
+        self.login(self.example_email("hamlet"))
+        json_result = self.client_patch(
+            "/json/settings",
             dict(
                 full_name='Foo Bar',
-                old_password=initial_password('hamlet@zulip.com'),
+                old_password=initial_password(self.example_email("hamlet")),
                 new_password='foobar1',
                 confirm_password='foobar1',
             ))
         self.assert_json_success(json_result)
         result = ujson.loads(json_result.content)
         self.check_well_formed_change_settings_response(result)
-        self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").
+        self.assertEqual(self.example_user('hamlet').
                          full_name, "Foo Bar")
-        self.client_post('/accounts/logout/')
-        self.login("hamlet@zulip.com", "foobar1")
-        user_profile = get_user_profile_by_email('hamlet@zulip.com')
+        self.logout()
+        self.login(self.example_email("hamlet"), "foobar1")
+        user_profile = self.example_user('hamlet')
         self.assertEqual(get_session_dict_user(self.client.session), user_profile.id)
 
     def test_illegal_name_changes(self):
         # type: () -> None
-        email = 'hamlet@zulip.com'
+        user = self.example_user('hamlet')
+        email = user.email
         self.login(email)
-        user = get_user_profile_by_email(email)
         full_name = user.full_name
 
         with self.settings(NAME_CHANGES_DISABLED=True):
-            json_result = self.client_post("/json/settings/change",
-                                           dict(full_name='Foo Bar'))
+            json_result = self.client_patch("/json/settings",
+                                            dict(full_name='Foo Bar'))
 
         # We actually fail silently here, since this only happens if
         # somebody is trying to game our API, and there's no reason to
         # give them the courtesy of an error reason.
         self.assert_json_success(json_result)
 
-        user = get_user_profile_by_email(email)
+        user = self.example_user('hamlet')
         self.assertEqual(user.full_name, full_name)
 
         # Now try a too-long name
-        json_result = self.client_post("/json/settings/change",
-                                       dict(full_name='x' * 1000))
+        json_result = self.client_patch("/json/settings",
+                                        dict(full_name='x' * 1000))
         self.assert_json_error(json_result, 'Name too long!')
+
+        # Now try a too-short name
+        json_result = self.client_patch("/json/settings",
+                                        dict(full_name='x'))
+        self.assert_json_error(json_result, 'Name too short!')
 
     def test_illegal_characters_in_name_changes(self):
         # type: () -> None
-        email = 'hamlet@zulip.com'
+        email = self.example_email("hamlet")
         self.login(email)
 
         # Now try a name with invalid characters
-        json_result = self.client_post("/json/settings/change",
-                                       dict(full_name='Opheli*'))
+        json_result = self.client_patch("/json/settings",
+                                        dict(full_name='Opheli*'))
         self.assert_json_error(json_result, 'Invalid characters in name!')
 
     # This is basically a don't-explode test.
     def test_notify_settings(self):
         # type: () -> None
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_desktop_notifications")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_stream_desktop_notifications")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_stream_sounds")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_sounds")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_offline_email_notifications")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_offline_push_notifications")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_online_push_notifications")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_digest_emails")
-        self.check_for_toggle_param_patch("/json/settings/notifications", "pm_content_in_desktop_notifications")
+        for notification_setting in UserProfile.notification_setting_types:
+            self.check_for_toggle_param_patch("/json/settings/notifications",
+                                              notification_setting)
 
     def test_ui_settings(self):
         # type: () -> None
         self.check_for_toggle_param_patch("/json/settings/ui", "autoscroll_forever")
         self.check_for_toggle_param_patch("/json/settings/ui", "default_desktop_notifications")
 
-    def test_toggling_left_side_userlist(self):
+    def test_toggling_boolean_user_display_settings(self):
         # type: () -> None
-        self.check_for_toggle_param_patch("/json/settings/display", "left_side_userlist")
-
-    def test_toggling_emoji_alt_code(self):
-        # type: () -> None
-        self.check_for_toggle_param_patch("/json/settings/display", "emoji_alt_code")
-
-    def test_time_setting(self):
-        # type: () -> None
-        self.check_for_toggle_param_patch("/json/settings/display", "twenty_four_hour_time")
+        """Test updating each boolean setting in UserProfile property_types"""
+        boolean_settings = (s for s in UserProfile.property_types if UserProfile.property_types[s] is bool)
+        for display_setting in boolean_settings:
+            self.check_for_toggle_param_patch("/json/settings/display", display_setting)
 
     def test_enter_sends_setting(self):
         # type: () -> None
@@ -156,9 +150,9 @@ class ChangeSettingsTest(ZulipTestCase):
         """
         new_password and confirm_password must match
         """
-        self.login("hamlet@zulip.com")
-        result = self.client_post(
-            "/json/settings/change",
+        self.login(self.example_email("hamlet"))
+        result = self.client_patch(
+            "/json/settings",
             dict(
                 new_password="mismatched_password",
                 confirm_password="not_the_same",
@@ -171,9 +165,9 @@ class ChangeSettingsTest(ZulipTestCase):
         """
         new_password and confirm_password must match
         """
-        self.login("hamlet@zulip.com")
-        result = self.client_post(
-            "/json/settings/change",
+        self.login(self.example_email("hamlet"))
+        result = self.client_patch(
+            "/json/settings",
             dict(
                 old_password='bad_password',
                 new_password="ignored",
@@ -188,67 +182,63 @@ class ChangeSettingsTest(ZulipTestCase):
         to this API, or it should fail.  (Eventually, we should
         probably use a patch interface for these changes.)
         """
-        self.login("hamlet@zulip.com")
-        result = self.client_post("/json/settings/change",
-                                  dict(old_password='ignored',))
+        self.login(self.example_email("hamlet"))
+        result = self.client_patch("/json/settings",
+                                   dict(old_password='ignored',))
         self.assert_json_error(result, "No new data supplied")
 
-    def test_change_default_language(self):
-        # type: () -> None
-        """
-        Test changing the default language of the user.
-        """
-        email = "hamlet@zulip.com"
+    def do_test_change_user_display_setting(self, setting_name):
+        # type: (str) -> None
+
+        test_changes = dict(
+            default_language = 'de',
+            emojiset = 'apple',
+            timezone = 'US/Mountain',
+        )  # type: Dict[str, Any]
+
+        email = self.example_email('hamlet')
         self.login(email)
-        german = "de"
-        data = dict(default_language=ujson.dumps(german))
+        test_value = test_changes.get(setting_name)
+        # Error if a setting in UserProfile.property_types does not have test values
+        if test_value is None:
+            raise AssertionError('No test created for %s' % (setting_name))
+        invalid_value = 'invalid_' + setting_name
+
+        data = {setting_name: ujson.dumps(test_value)}
         result = self.client_patch("/json/settings/display", data)
         self.assert_json_success(result)
-        user_profile = get_user_profile_by_email(email)
-        self.assertEqual(user_profile.default_language, german)
+        user_profile = self.example_user('hamlet')
+        self.assertEqual(getattr(user_profile, setting_name), test_value)
 
-        # Test to make sure invalid languages are not accepted
+        # Test to make sure invalid settings are not accepted
         # and saved in the db.
-        invalid_lang = "invalid_lang"
-        data = dict(default_language=ujson.dumps(invalid_lang))
+        data = {setting_name: ujson.dumps(invalid_value)}
         result = self.client_patch("/json/settings/display", data)
-        self.assert_json_error(result, "Invalid language '%s'" % (invalid_lang,))
-        user_profile = get_user_profile_by_email(email)
-        self.assertNotEqual(user_profile.default_language, invalid_lang)
+        # the json error for multiple word setting names (ex: default_language)
+        # displays as 'Invalid language'. Using setting_name.split('_') to format.
+        self.assert_json_error(result, "Invalid %s '%s'" % (setting_name.split('_')[-1],
+                                                            invalid_value))
+        user_profile = self.example_user('hamlet')
+        self.assertNotEqual(getattr(user_profile, setting_name), invalid_value)
 
-    def test_change_timezone(self):
+    def test_change_user_display_setting(self):
         # type: () -> None
-        """
-        Test changing the timezone of the user.
-        """
-        email = "hamlet@zulip.com"
-        self.login(email)
-        usa_pacific = 'US/Pacific'
-        data = dict(timezone=ujson.dumps(usa_pacific))
-        result = self.client_patch("/json/settings/display", data)
-        self.assert_json_success(result)
-        user_profile = get_user_profile_by_email(email)
-        self.assertEqual(user_profile.timezone, usa_pacific)
+        """Test updating each non-boolean setting in UserProfile property_types"""
+        user_settings = (s for s in UserProfile.property_types if UserProfile.property_types[s] is not bool)
+        for setting in user_settings:
+            self.do_test_change_user_display_setting(setting)
 
-        # Test to make sure invalid timezones are not accepted
-        # and saved in the db.
-        invalid_timezone = "invalid_timezone"
-        data = dict(timezone=ujson.dumps(invalid_timezone))
-        result = self.client_patch("/json/settings/display", data)
-        self.assert_json_error(result, "Invalid timezone '%s'" % (invalid_timezone,))
-        user_profile = get_user_profile_by_email(email)
-        self.assertNotEqual(user_profile.timezone, invalid_timezone)
 
 class UserChangesTest(ZulipTestCase):
     def test_update_api_key(self):
         # type: () -> None
-        email = "hamlet@zulip.com"
+        user = self.example_user('hamlet')
+        email = user.email
         self.login(email)
-        user = get_user_profile_by_email(email)
         old_api_key = user.api_key
         result = self.client_post('/json/users/me/api_key/regenerate')
         self.assert_json_success(result)
-        new_api_key = ujson.loads(result.content)['api_key']
+        new_api_key = result.json()['api_key']
         self.assertNotEqual(old_api_key, new_api_key)
-        user = get_user_profile_by_email(email)
+        user = self.example_user('hamlet')
         self.assertEqual(new_api_key, user.api_key)

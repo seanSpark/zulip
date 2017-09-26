@@ -54,6 +54,12 @@ exports.get_by_email = function (email) {
     return person;
 };
 
+exports.get_realm_count = function () {
+    // This returns the number of active people in our realm.  It should
+    // exclude bots and deactivated users.
+    return realm_people_dict.num_items();
+};
+
 exports.id_matches_email_operand = function (user_id, email) {
     var person = exports.get_by_email(email);
 
@@ -93,6 +99,29 @@ exports.get_user_id = function (email) {
     return user_id;
 };
 
+exports.is_known_user_id = function (user_id) {
+    /*
+    For certain low-stakes operations, such as emoji reactions,
+    we may get a user_id that we don't know about, because the
+    user may have been deactivated.  (We eventually want to track
+    deactivated users on the client, but until then, this is an
+    expedient thing we can check.)
+    */
+    return people_by_user_id_dict.has(user_id);
+};
+
+function sort_numerically(user_ids) {
+    user_ids = _.map(user_ids, function (user_id) {
+        return parseInt(user_id, 10);
+    });
+
+    user_ids.sort(function (a, b) {
+        return a - b;
+    });
+
+    return user_ids;
+}
+
 exports.huddle_string = function (message) {
     if (message.type !== 'private') {
         return;
@@ -113,7 +142,8 @@ exports.huddle_string = function (message) {
     if (user_ids.length <= 1) {
         return;
     }
-    user_ids.sort();
+
+    user_ids = sort_numerically(user_ids);
 
     return user_ids.join(',');
 };
@@ -158,13 +188,32 @@ exports.reply_to_to_user_ids_string = function (emails_string) {
         return;
     }
 
-    user_ids.sort();
+    user_ids = sort_numerically(user_ids);
 
     return user_ids.join(',');
 };
 
-exports.get_full_name = function (user_id) {
-    return people_by_user_id_dict.get(user_id).full_name;
+exports.get_user_time_preferences = function (user_id) {
+    var user_timezone = people.get_person_from_user_id(user_id).timezone;
+    if (user_timezone) {
+        if (page_params.twenty_four_hour_time) {
+            return {
+                timezone: user_timezone,
+                format: "HH:mm",
+            };
+        }
+        return {
+            timezone: user_timezone,
+            format: "hh:mm A",
+        };
+    }
+};
+
+exports.get_user_time = function (user_id) {
+    var user_pref = people.get_user_time_preferences(user_id);
+    if (user_pref) {
+        return moment().tz(user_pref.timezone).format(user_pref.format);
+    }
 };
 
 exports.emails_strings_to_user_ids_string = function (emails_string) {
@@ -185,7 +234,7 @@ exports.email_list_to_user_ids_string = function (emails) {
         return;
     }
 
-    user_ids.sort();
+    user_ids = sort_numerically(user_ids);
 
     return user_ids.join(',');
 };
@@ -242,6 +291,36 @@ exports.pm_reply_to = function (message) {
     return reply_to;
 };
 
+function sorted_other_user_ids(user_ids) {
+    // This excludes your own user id unless you're the only user
+    // (i.e. you sent a message to yourself).
+
+    var other_user_ids = _.filter(user_ids, function (user_id) {
+        return !people.is_my_user_id(user_id);
+    });
+
+    if (other_user_ids.length >= 1) {
+        user_ids = other_user_ids;
+    } else {
+        user_ids = [my_user_id];
+    }
+
+    user_ids = sort_numerically(user_ids);
+
+    return user_ids;
+}
+
+exports.pm_lookup_key = function (user_ids_string) {
+    /*
+        The server will sometimes include our own user id
+        in keys for PMs, but we only want our user id if
+        we sent a message to ourself.
+    */
+    var user_ids = user_ids_string.split(',');
+    user_ids = sorted_other_user_ids(user_ids);
+    return user_ids.join(',');
+};
+
 exports.pm_with_user_ids = function (message) {
     if (message.type !== 'private') {
         return;
@@ -256,19 +335,31 @@ exports.pm_with_user_ids = function (message) {
         return elem.user_id || elem.id;
     });
 
-    var other_user_ids = _.filter(user_ids, function (user_id) {
-        return !people.is_my_user_id(user_id);
-    });
+    return sorted_other_user_ids(user_ids);
+};
 
-    if (other_user_ids.length >= 1) {
-        user_ids = other_user_ids;
-    } else {
-        user_ids = [my_user_id];
+exports.group_pm_with_user_ids = function (message) {
+    if (message.type !== 'private') {
+        return;
     }
 
-    user_ids.sort();
-
-    return user_ids;
+    if (message.display_recipient.length === 0) {
+        blueslip.error('Empty recipient list in message');
+        return;
+    }
+    var user_ids = _.map(message.display_recipient, function (elem) {
+        return elem.user_id || elem.id;
+    });
+    var is_user_present = _.some(user_ids, function (user_id) {
+        return people.is_my_user_id(user_id);
+    });
+    if (is_user_present) {
+        user_ids.sort();
+        if (user_ids.length > 2) {
+            return user_ids;
+        }
+    }
+    return false;
 };
 
 exports.pm_with_url = function (message) {
@@ -336,6 +427,11 @@ exports.pm_with_operand_ids = function (operand) {
         return people_dict.get(email);
     });
 
+    // If your email is included in a PM group with other people, just ignore it
+    if (persons.length > 1) {
+        persons = _.without(persons, people_by_user_id_dict.get(my_user_id));
+    }
+
     if (!_.all(persons)) {
         return;
     }
@@ -344,7 +440,7 @@ exports.pm_with_operand_ids = function (operand) {
         return person.user_id;
     });
 
-    user_ids.sort();
+    user_ids = sort_numerically(user_ids);
 
     return user_ids;
 };
@@ -469,29 +565,51 @@ exports.incr_recipient_count = function (user_id) {
     pm_recipient_count_dict.set(user_id, old_count + 1);
 };
 
+// Diacritic removal from:
+// https://stackoverflow.com/questions/18236208/perform-a-find-match-with-javascript-ignoring-special-language-characters-acce
+function remove_diacritics(s) {
+    if (/^[a-z]+$/.test(s)) {
+        return s;
+    }
+
+    return s
+            .replace(/[áàãâä]/g,"a")
+            .replace(/[éèëê]/g,"e")
+            .replace(/[íìïî]/g,"i")
+            .replace(/[óòöôõ]/g,"o")
+            .replace(/[úùüû]/g, "u")
+            .replace(/[ç]/g, "c")
+            .replace(/[ñ]/g, "n");
+}
+
+exports.person_matches_query = function (user, query) {
+    var email = user.email.toLowerCase();
+    var names = user.full_name.toLowerCase().split(' ');
+
+    var termlets = query.toLowerCase().split(/\s+/);
+    termlets = _.map(termlets, function (termlet) {
+        return termlet.trim();
+    });
+
+    if (email.indexOf(query.trim()) === 0) {
+        return true;
+    }
+    return _.all(termlets, function (termlet) {
+        var is_ascii = /^[a-z]+$/.test(termlet);
+        return _.any(names, function (name) {
+            if (is_ascii) {
+                // Only ignore diacritics if the query is plain ascii
+                name = remove_diacritics(name);
+            }
+            if (name.indexOf(termlet) === 0) {
+                return true;
+            }
+        });
+    });
+};
+
 exports.filter_people_by_search_terms = function (users, search_terms) {
         var filtered_users = new Dict();
-
-        var matchers = _.map(search_terms, function (search_term) {
-            var termlets = search_term.toLowerCase().split(/\s+/);
-            termlets = _.map(termlets, function (termlet) {
-                return termlet.trim();
-            });
-
-            return function (email, names) {
-                if (email.indexOf(search_term.trim()) === 0) {
-                    return true;
-                }
-                return _.all(termlets, function (termlet) {
-                    return _.any(names, function (name) {
-                        if (name.indexOf(termlet) === 0) {
-                            return true;
-                        }
-                    });
-                });
-            };
-        });
-
 
         // Loop through users and populate filtered_users only
         // if they include search_terms
@@ -502,18 +620,9 @@ exports.filter_people_by_search_terms = function (users, search_terms) {
                 return;
             }
 
-            var email = user.email.toLowerCase();
-
-            // Remove extra whitespace
-            var names = person.full_name.toLowerCase().split(/\s+/);
-            names = _.map(names, function (name) {
-                return name.trim();
-            });
-
-
             // Return user emails that include search terms
-            var match = _.any(matchers, function (matcher) {
-                return matcher(email, names);
+            var match = _.any(search_terms, function (search_term) {
+                return exports.person_matches_query(user, search_term);
             });
 
             if (match) {
@@ -656,8 +765,8 @@ exports.is_my_user_id = function (user_id) {
     return user_id.toString() === my_user_id.toString();
 };
 
-$(function () {
-    _.each(page_params.people_list, function (person) {
+exports.initialize = function () {
+    _.each(page_params.realm_users, function (person) {
         exports.add_in_realm(person);
     });
 
@@ -670,9 +779,9 @@ $(function () {
 
     exports.initialize_current_user(page_params.user_id);
 
-    delete page_params.people_list; // We are the only consumer of this.
+    delete page_params.realm_users; // We are the only consumer of this.
     delete page_params.cross_realm_bots;
-});
+};
 
 return exports;
 

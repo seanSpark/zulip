@@ -27,8 +27,12 @@ for any particular type of object.
 '''
 from __future__ import absolute_import
 from django.utils.translation import ugettext as _
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email, URLValidator
 import six
-from typing import Any, Callable, Iterable, Optional, Tuple, TypeVar
+from typing import Any, Callable, Iterable, Optional, Tuple, TypeVar, Text
+
+from zerver.lib.request import JsonableError
 
 Validator = Callable[[str, Any], Optional[str]]
 
@@ -38,10 +42,24 @@ def check_string(var_name, val):
         return _('%s is not a string') % (var_name,)
     return None
 
+def check_short_string(var_name, val):
+    # type: (str, Any) -> Optional[str]
+    max_length = 200
+    if len(val) >= max_length:
+        return _("{var_name} is longer than {max_length}.".format(
+            var_name=var_name, max_length=max_length))
+    return check_string(var_name, val)
+
 def check_int(var_name, val):
     # type: (str, Any) -> Optional[str]
     if not isinstance(val, int):
         return _('%s is not an integer') % (var_name,)
+    return None
+
+def check_float(var_name, val):
+    # type: (str, Any) -> Optional[str]
+    if not isinstance(val, float):
+        return _('%s is not a float') % (var_name,)
     return None
 
 def check_bool(var_name, val):
@@ -61,7 +79,7 @@ def check_none_or(sub_validator):
     return f
 
 def check_list(sub_validator, length=None):
-    # type: (Validator, Optional[int]) -> Validator
+    # type: (Optional[Validator], Optional[int]) -> Validator
     def f(var_name, val):
         # type: (str, Any) -> Optional[str]
         if not isinstance(val, list):
@@ -81,8 +99,8 @@ def check_list(sub_validator, length=None):
         return None
     return f
 
-def check_dict(required_keys):
-    # type: (Iterable[Tuple[str, Validator]]) -> Validator
+def check_dict(required_keys, _allow_only_listed_keys=False):
+    # type: (Iterable[Tuple[str, Validator]], bool) -> Validator
     def f(var_name, val):
         # type: (str, Any) -> Optional[str]
         if not isinstance(val, dict):
@@ -97,9 +115,18 @@ def check_dict(required_keys):
             if error:
                 return error
 
+        if _allow_only_listed_keys:
+            delta_keys = set(val.keys()) - set(x[0] for x in required_keys)
+            if len(delta_keys) != 0:
+                return _("Unexpected arguments: %s" % (", ".join(list(delta_keys))))
+
         return None
 
     return f
+
+def check_dict_only(required_keys):
+    # type: (Iterable[Tuple[str, Validator]]) -> Validator
+    return check_dict(required_keys, _allow_only_listed_keys=True)
 
 def check_variable_type(allowed_type_funcs):
     # type: (Iterable[Validator]) -> Validator
@@ -129,3 +156,18 @@ def equals(expected_val):
                      'value': val})
         return None
     return f
+
+def validate_login_email(email):
+    # type: (Text) -> None
+    try:
+        validate_email(email)
+    except ValidationError as err:
+        raise JsonableError(str(err.message))
+
+def check_url(var_name, val):
+    # type: (str, Text) -> None
+    validate = URLValidator()
+    try:
+        validate(val)
+    except ValidationError as err:
+        raise JsonableError(str(err.message))

@@ -1,13 +1,14 @@
-global.stub_out_jquery();
+zrequire('hash_util');
+zrequire('hashchange');
+zrequire('narrow_state');
+zrequire('people');
+zrequire('stream_data');
+zrequire('Filter', 'js/filter');
 
-add_dependencies({
-    hashchange: 'js/hashchange.js',
-    people: 'js/people.js',
-    stream_data: 'js/stream_data.js',
-    Filter: 'js/filter.js',
-});
+zrequire('narrow');
 
-var narrow = require('js/narrow.js');
+var narrow_state = global.narrow_state;
+
 var Filter = global.Filter;
 var stream_data = global.stream_data;
 var _ = global._;
@@ -16,95 +17,38 @@ function set_filter(operators) {
     operators = _.map(operators, function (op) {
         return {operator: op[0], operand: op[1]};
     });
-    narrow._set_current_filter(new Filter(operators));
+    narrow_state.set_current_filter(new Filter(operators));
 }
 
-(function test_stream() {
-    set_filter([['stream', 'Foo'], ['topic', 'Bar'], ['search', 'yo']]);
-
-    assert.equal(narrow.stream(), 'Foo');
-    assert.equal(narrow.topic(), 'Bar');
-}());
-
-
-(function test_narrowed() {
-    narrow._set_current_filter(undefined); // not narrowed, basically
-    assert(!narrow.narrowed_to_pms());
-    assert(!narrow.narrowed_by_reply());
-    assert(!narrow.narrowed_to_search());
-    assert(!narrow.narrowed_to_topic());
-
-    set_filter([['stream', 'Foo']]);
-    assert(!narrow.narrowed_to_pms());
-    assert(!narrow.narrowed_by_reply());
-    assert(!narrow.narrowed_to_search());
-    assert(!narrow.narrowed_to_topic());
-
-    set_filter([['pm-with', 'steve@zulip.com']]);
-    assert(narrow.narrowed_to_pms());
-    assert(narrow.narrowed_by_reply());
-    assert(!narrow.narrowed_to_search());
-    assert(!narrow.narrowed_to_topic());
-
-    set_filter([['stream', 'Foo'], ['topic', 'bar']]);
-    assert(!narrow.narrowed_to_pms());
-    assert(narrow.narrowed_by_reply());
-    assert(!narrow.narrowed_to_search());
-    assert(narrow.narrowed_to_topic());
-
-    set_filter([['search', 'grail']]);
-    assert(!narrow.narrowed_to_pms());
-    assert(!narrow.narrowed_by_reply());
-    assert(narrow.narrowed_to_search());
-    assert(!narrow.narrowed_to_topic());
-}());
-
-(function test_operators() {
+(function test_stream_topic() {
     set_filter([['stream', 'Foo'], ['topic', 'Bar'], ['search', 'Yo']]);
-    var result = narrow.operators();
-    assert.equal(result.length, 3);
-    assert.equal(result[0].operator, 'stream');
-    assert.equal(result[0].operand, 'Foo');
 
-    assert.equal(result[1].operator, 'topic');
-    assert.equal(result[1].operand, 'Bar');
+    set_global('current_msg_list', {
+    });
 
-    assert.equal(result[2].operator, 'search');
-    assert.equal(result[2].operand, 'yo');
-}());
+    global.current_msg_list.selected_message = function () {};
 
-(function test_muting_enabled() {
-    set_filter([['stream', 'devel']]);
-    assert(narrow.muting_enabled());
+    var stream_topic = narrow.stream_topic();
 
-    narrow._set_current_filter(undefined); // not narrowed, basically
-    assert(narrow.muting_enabled());
+    assert.deepEqual(stream_topic, {
+        stream: 'Foo',
+        topic: 'Bar',
+    });
 
-    set_filter([['stream', 'devel'], ['topic', 'mac']]);
-    assert(!narrow.muting_enabled());
+    global.current_msg_list.selected_message = function () {
+        return {
+            stream: 'Stream1',
+            subject: 'Topic1',
+        };
+    };
 
-    set_filter([['search', 'whatever']]);
-    assert(!narrow.muting_enabled());
+    stream_topic = narrow.stream_topic();
 
-    set_filter([['is', 'private']]);
-    assert(!narrow.muting_enabled());
+    assert.deepEqual(stream_topic, {
+        stream: 'Stream1',
+        topic: 'Topic1',
+    });
 
-}());
-
-(function test_set_compose_defaults() {
-    set_filter([['stream', 'Foo'], ['topic', 'Bar']]);
-
-    var opts = {};
-    narrow.set_compose_defaults(opts);
-    assert.equal(opts.stream, 'Foo');
-    assert.equal(opts.subject, 'Bar');
-
-    stream_data.add_sub('ROME', {name: 'ROME', stream_id: 99});
-    set_filter([['stream', 'rome']]);
-
-    opts = {};
-    narrow.set_compose_defaults(opts);
-    assert.equal(opts.stream, 'ROME');
 }());
 
 (function test_uris() {
@@ -131,7 +75,7 @@ function set_filter(operators) {
     uri = narrow.by_sender_uri(ray.email);
     assert.equal(uri, '#narrow/sender/22-ray');
 
-    var emails = global.hashchange.decode_operand('pm-with', '22,23-group');
+    var emails = global.hash_util.decode_operand('pm-with', '22,23-group');
     assert.equal(emails, 'alice@example.com,ray@example.com');
 }());
 
@@ -143,7 +87,7 @@ function set_filter(operators) {
       return {hide: function () {hide_id = id;}, show: function () {show_id = id;}};
     };
 
-    narrow._set_current_filter(undefined);
+    narrow_state.reset_current_filter();
     narrow.show_empty_narrow_message();
     assert.equal(hide_id,'.empty_feed_notice');
     assert.equal(show_id, '#empty_narrow_message');
@@ -155,6 +99,7 @@ function set_filter(operators) {
     assert.equal(show_id, '#nonsubbed_private_nonexistent_stream_narrow_message');
 
     // for non sub public stream
+    stream_data.add_sub('ROME', {name: 'ROME', stream_id: 99});
     set_filter([['stream', 'Rome']]);
     narrow.show_empty_narrow_message();
     assert.equal(hide_id,'.empty_feed_notice');
@@ -175,6 +120,11 @@ function set_filter(operators) {
     assert.equal(hide_id,'.empty_feed_notice');
     assert.equal(show_id, '#empty_narrow_all_private_message');
 
+    set_filter([['is', 'unread']]);
+    narrow.show_empty_narrow_message();
+    assert.equal(hide_id,'.empty_feed_notice');
+    assert.equal(show_id, '#no_unread_narrow_message');
+
     set_filter([['pm-with', ['alice@example.com', 'Yo']]]);
     narrow.show_empty_narrow_message();
     assert.equal(hide_id,'.empty_feed_notice');
@@ -184,6 +134,11 @@ function set_filter(operators) {
     narrow.show_empty_narrow_message();
     assert.equal(hide_id,'.empty_feed_notice');
     assert.equal(show_id, '#empty_narrow_private_message');
+
+    set_filter([['group-pm-with', 'alice@example.com']]);
+    narrow.show_empty_narrow_message();
+    assert.equal(hide_id,'.empty_feed_notice');
+    assert.equal(show_id, '#empty_narrow_group_private_message');
 
     set_filter([['sender', 'ray@example.com']]);
     narrow.show_empty_narrow_message();
@@ -200,24 +155,3 @@ function set_filter(operators) {
     assert.equal(hide_id,'.empty_feed_notice');
     assert.equal(show_id, '#empty_search_narrow_message');
 }());
-
-(function test_update_email() {
-    var steve = {
-        email: 'steve@foo.com',
-        user_id: 43,
-        full_name: 'Steve',
-    };
-
-    people.add(steve);
-    set_filter([
-        ['pm-with', 'steve@foo.com'],
-        ['sender', 'steve@foo.com'],
-        ['stream', 'steve@foo.com'], // try to be tricky
-    ]);
-    narrow.update_email(steve.user_id, 'showell@foo.com');
-    var filter = narrow.filter();
-    assert.deepEqual(filter.operands('pm-with'), ['showell@foo.com']);
-    assert.deepEqual(filter.operands('sender'), ['showell@foo.com']);
-    assert.deepEqual(filter.operands('stream'), ['steve@foo.com']);
-}());
-

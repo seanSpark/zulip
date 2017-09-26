@@ -30,33 +30,34 @@ http://stackoverflow.com/questions/2090717/getting-translation-strings-for-jinja
 """
 from __future__ import absolute_import
 
-from typing import Any, Dict, Iterable, Optional, Mapping, Set, Tuple, Text
+from typing import Any, Dict, Iterable, Mapping, Text
 
 from argparse import ArgumentParser
 import os
 import re
 import glob
 import json
-from six.moves import filter
-from six.moves import map
 from six.moves import zip
 
+import django
 from django.core.management.commands import makemessages
-from django.utils.translation import trans_real
 from django.template.base import BLOCK_TAG_START, BLOCK_TAG_END
 from django.conf import settings
+from django.utils.translation import template
+
+from zerver.lib.str_utils import force_text
 
 strip_whitespace_right = re.compile(u"(%s-?\\s*(trans|pluralize).*?-%s)\\s+" % (BLOCK_TAG_START, BLOCK_TAG_END), re.U)
 strip_whitespace_left = re.compile(u"\\s+(%s-\\s*(endtrans|pluralize).*?-?%s)" % (
                                    BLOCK_TAG_START, BLOCK_TAG_END), re.U)
 
-regexes = ['{{#tr .*?}}(.*?){{/tr}}',
-           '{{t "(.*?)"\W*}}',
-           "{{t '(.*?)'\W*}}",
+regexes = ['{{#tr .*?}}([\s\S]*?){{/tr}}',  # '.' doesn't match '\n' by default
+           '{{\s*t "(.*?)"\W*}}',
+           "{{\s*t '(.*?)'\W*}}",
            "i18n\.t\('([^\']*?)'\)",
-           "i18n\.t\('(.*?)',.*?[^,]\)",
+           "i18n\.t\('(.*?)',\s*.*?[^,]\)",
            'i18n\.t\("([^\"]*?)"\)',
-           'i18n\.t\("(.*?)",.*?[^,]\)',
+           'i18n\.t\("(.*?)",\s*.*?[^,]\)',
            ]
 
 frontend_compiled_regexes = [re.compile(regex) for regex in regexes]
@@ -103,27 +104,27 @@ class Command(makemessages.Command):
 
     def handle_django_locales(self, *args, **options):
         # type: (*Any, **Any) -> None
-        old_endblock_re = trans_real.endblock_re
-        old_block_re = trans_real.block_re
-        old_constant_re = trans_real.constant_re
+        old_endblock_re = template.endblock_re
+        old_block_re = template.block_re
+        old_constant_re = template.constant_re
 
-        old_templatize = trans_real.templatize
+        old_templatize = template.templatize
         # Extend the regular expressions that are used to detect
         # translation blocks with an "OR jinja-syntax" clause.
-        trans_real.endblock_re = re.compile(
-            trans_real.endblock_re.pattern + '|' + r"""^-?\s*endtrans\s*-?$""")
-        trans_real.block_re = re.compile(
-            trans_real.block_re.pattern + '|' + r"""^-?\s*trans(?:\s+(?!'|")(?=.*?=.*?)|\s*-?$)""")
-        trans_real.plural_re = re.compile(
-            trans_real.plural_re.pattern + '|' + r"""^-?\s*pluralize(?:\s+.+|-?$)""")
-        trans_real.constant_re = re.compile(r"""_\(((?:".*?")|(?:'.*?')).*\)""")
+        template.endblock_re = re.compile(
+            template.endblock_re.pattern + '|' + r"""^-?\s*endtrans\s*-?$""")
+        template.block_re = re.compile(
+            template.block_re.pattern + '|' + r"""^-?\s*trans(?:\s+(?!'|")(?=.*?=.*?)|\s*-?$)""")
+        template.plural_re = re.compile(
+            template.plural_re.pattern + '|' + r"""^-?\s*pluralize(?:\s+.+|-?$)""")
+        template.constant_re = re.compile(r"""_\(((?:".*?")|(?:'.*?')).*\)""")
 
-        def my_templatize(src, origin=None):
-            # type: (Text, Optional[Text]) -> Text
+        def my_templatize(src, *args, **kwargs):
+            # type: (Text, *Any, **Any) -> Text
             new_src = strip_whitespaces(src)
-            return old_templatize(new_src, origin)
+            return old_templatize(new_src, *args, **kwargs)
 
-        trans_real.templatize = my_templatize
+        template.templatize = my_templatize
 
         try:
             ignore_patterns = options.get('ignore_patterns', [])
@@ -131,47 +132,50 @@ class Command(makemessages.Command):
             options['ignore_patterns'] = ignore_patterns
             super(Command, self).handle(*args, **options)
         finally:
-            trans_real.endblock_re = old_endblock_re
-            trans_real.block_re = old_block_re
-            trans_real.templatize = old_templatize
-            trans_real.constant_re = old_constant_re
+            template.endblock_re = old_endblock_re
+            template.block_re = old_block_re
+            template.templatize = old_templatize
+            template.constant_re = old_constant_re
 
     def extract_strings(self, data):
         # type: (str) -> Dict[str, str]
-        data = self.ignore_javascript_comments(data)
-        translation_strings = {} # type: Dict[str, str]
+        translation_strings = {}  # type: Dict[str, str]
         for regex in frontend_compiled_regexes:
             for match in regex.findall(data):
+                match = match.strip()
+                match = ' '.join(line.strip() for line in match.splitlines())
+                match = match.replace('\n', '\\n')
                 translation_strings[match] = ""
 
         return translation_strings
 
     def ignore_javascript_comments(self, data):
         # type: (str) -> str
-
         # Removes multi line comments.
-        data = re.sub(multiline_js_comment, "", data)
+        data = multiline_js_comment.sub('', data)
         # Removes single line (//) comments.
-        data = re.sub(singleline_js_comment, "", data)
+        data = singleline_js_comment.sub('', data)
         return data
 
     def get_translation_strings(self):
         # type: () -> Dict[str, str]
-        translation_strings = {} # type: Dict[str, str]
+        translation_strings = {}  # type: Dict[str, str]
         dirname = self.get_template_dir()
 
         for dirpath, dirnames, filenames in os.walk(dirname):
             for filename in [f for f in filenames if f.endswith(".handlebars")]:
+                if filename.startswith('.'):
+                    continue
                 with open(os.path.join(dirpath, filename), 'r') as reader:
                     data = reader.read()
-                    data = data.replace('\n', '\\n')
                     translation_strings.update(self.extract_strings(data))
 
         dirname = os.path.join(settings.DEPLOY_ROOT, 'static/js')
         for filename in os.listdir(dirname):
-            if filename.endswith('.js'):
+            if filename.endswith('.js') and not filename.startswith('.'):
                 with open(os.path.join(dirname, filename)) as reader:
                     data = reader.read()
+                    data = self.ignore_javascript_comments(data)
                     translation_strings.update(self.extract_strings(data))
 
         return translation_strings
@@ -220,7 +224,7 @@ class Command(makemessages.Command):
         Missing strings are removed, new strings are added and already
         translated strings are not touched.
         """
-        new_strings = {} # Dict[str, str]
+        new_strings = {}  # Dict[str, str]
         for k in translation_strings:
             k = k.replace('\\n', '\n')
             new_strings[k] = old_strings.get(k, k)
@@ -244,6 +248,10 @@ class Command(makemessages.Command):
             except (IOError, ValueError):
                 old_strings = {}
 
-            new_strings = self.get_new_strings(old_strings, translation_strings)
+            new_strings = {
+                force_text(k): v
+                for k, v in self.get_new_strings(old_strings,
+                                                 translation_strings).items()
+            }
             with open(output_path, 'w') as writer:
                 json.dump(new_strings, writer, indent=2, sort_keys=True)

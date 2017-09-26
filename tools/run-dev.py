@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -55,6 +55,10 @@ parser.add_option('--test',
                   action='store_true', dest='test',
                   help='Use the testing database and ports')
 
+parser.add_option('--minify',
+                  action='store_true', dest='minify',
+                  help='Minifies assets for testing in dev')
+
 parser.add_option('--interface',
                   action='store', dest='interface',
                   default=None, help='Set the IP or hostname for the proxy to listen on')
@@ -96,7 +100,7 @@ if options.interface is None:
 elif options.interface == "":
     options.interface = None
 
-runserver_args = [] # type: List[str]
+runserver_args = []  # type: List[str]
 base_port = 9991
 if options.test:
     base_port = 9981
@@ -112,6 +116,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = settings_module
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from scripts.lib.zulip_tools import WARNING, ENDC
+from django.conf import settings
 
 proxy_port = base_port
 django_port = base_port + 1
@@ -122,12 +127,6 @@ os.chdir(os.path.join(os.path.dirname(__file__), '..'))
 
 # Clean up stale .pyc files etc.
 subprocess.check_call('./tools/clean-repo')
-
-# HACK to fix up node_modules/.bin/handlebars deletion issue
-if not os.path.exists("node_modules/.bin/handlebars") and os.path.exists("node_modules/handlebars"):
-    print("Handlebars binary missing due to rebase past .gitignore fixup; fixing...")
-    subprocess.check_call(["rm", "-rf", "node_modules/handlebars"])
-    subprocess.check_call(["npm", "install"])
 
 if options.clear_memcached:
     print("Clearing memcached ...")
@@ -170,7 +169,14 @@ if options.test:
     # for the Casper tests.
     subprocess.check_call('./tools/webpack')
 else:
-    cmds += [['./tools/webpack', '--watch', '--port', str(webpack_port)]]
+    webpack_cmd = ['./tools/webpack', '--watch', '--port', str(webpack_port)]
+    if options.minify:
+        webpack_cmd.append('--minify')
+    if options.interface:
+        webpack_cmd += ["--host", options.interface]
+    else:
+        webpack_cmd += ["--host", "0.0.0.0"]
+    cmds.append(webpack_cmd)
 for cmd in cmds:
     subprocess.Popen(cmd)
 
@@ -204,10 +210,10 @@ class BaseWebsocketHandler(WebSocketHandler):
         # type: (*Any, **Any) -> None
         super(BaseWebsocketHandler, self).__init__(*args, **kwargs)
         # define client for target websocket server
-        self.client = None # type: Any
+        self.client = None  # type: Any
 
     def get(self, *args, **kwargs):
-        # type: (*Any, **Any) -> Callable
+        # type: (*Any, **Any) -> Optional[Callable]
         # use get method from WebsocketHandler
         return super(BaseWebsocketHandler, self).get(*args, **kwargs)
 
@@ -364,7 +370,6 @@ class Application(web.Application):
             (r"/api/v1/events.*", TornadoHandler),
             (r"/webpack.*", WebPackHandler),
             (r"/sockjs.*", TornadoHandler),
-            (r"/socket.io.*", WebPackHandler),
             (r"/.*", DjangoHandler)
         ]
         super(Application, self).__init__(handlers, enable_logging=enable_logging)

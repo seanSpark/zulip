@@ -19,6 +19,9 @@ if os.getenv("EXTERNAL_HOST") is None:
     os.environ["EXTERNAL_HOST"] = "testserver"
 from .settings import *
 
+# Used to clone DBs in backend tests.
+BACKEND_DATABASE_TEMPLATE = 'zulip_test_template'
+
 DATABASES["default"] = {
     "NAME": "zulip_test",
     "USER": "zulip_test",
@@ -38,11 +41,6 @@ if USING_PGROONGA:
     pg_options = '-c search_path=%(SCHEMA)s,zulip,public,pgroonga,pg_catalog' % \
         DATABASES['default']
     DATABASES['default']['OPTIONS']['options'] = pg_options
-
-# In theory this should just go in zproject/settings.py inside the `if
-# PIPELINE_ENABLED` statement, but because zproject/settings.py is processed
-# first, we have to add it here as a hack.
-JS_SPECS['app']['source_filenames'].append('js/bundle.js')
 
 if "TORNADO_SERVER" in os.environ:
     # This covers the Casper test suite case
@@ -96,10 +94,17 @@ CACHES['database'] = {
     }
 }
 
+# Use production config from Webpack in tests
+if CASPER_TESTS:
+    WEBPACK_FILE = 'webpack-stats-production.json'
+else:
+    WEBPACK_FILE = os.path.join('var', 'webpack-stats-test.json')
+WEBPACK_LOADER['DEFAULT']['STATS_FILE'] = os.path.join(DEPLOY_ROOT, WEBPACK_FILE)
 
 if CASPER_TESTS:
     # Don't auto-restart Tornado server during casper tests
     AUTORELOAD = False
+    REALMS_HAVE_SUBDOMAINS = True
 else:
     # Use local memory cache for backend tests.
     CACHES['default'] = {
@@ -119,9 +124,21 @@ LOCAL_UPLOADS_DIR = 'var/test_uploads'
 S3_KEY = 'test-key'
 S3_SECRET_KEY = 'test-secret-key'
 S3_AUTH_UPLOADS_BUCKET = 'test-authed-bucket'
-REALMS_HAVE_SUBDOMAINS = bool(os.getenv('REALMS_HAVE_SUBDOMAINS', False))
 
 # Test Custom TOS template rendering
 TERMS_OF_SERVICE = 'corporate/terms.md'
 
 INLINE_URL_EMBED_PREVIEW = False
+
+HOME_NOT_LOGGED_IN = '/login'
+LOGIN_URL = '/accounts/login'
+
+# By default will not send emails when login occurs.
+# Explicity set this to True within tests that must have this on.
+SEND_LOGIN_EMAILS = False
+
+GOOGLE_OAUTH2_CLIENT_ID = "id"
+GOOGLE_OAUTH2_CLIENT_SECRET = "secret"
+
+SOCIAL_AUTH_GITHUB_KEY = "key"
+SOCIAL_AUTH_GITHUB_SECRET = "secret"

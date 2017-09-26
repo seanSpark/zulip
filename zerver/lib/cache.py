@@ -18,7 +18,6 @@ import base64
 import random
 import sys
 import os
-import os.path
 import hashlib
 import six
 
@@ -101,12 +100,15 @@ def get_or_create_key_prefix():
 
     return prefix
 
-KEY_PREFIX = get_or_create_key_prefix() # type: Text
+KEY_PREFIX = get_or_create_key_prefix()  # type: Text
 
 def bounce_key_prefix_for_testing(test_name):
     # type: (Text) -> None
     global KEY_PREFIX
     KEY_PREFIX = test_name + u':' + Text(os.getpid()) + u':'
+    # We are taking the hash of the KEY_PREFIX to decrease the size of the key.
+    # Memcached keys should have a length of less than 256.
+    KEY_PREFIX = hashlib.sha1(KEY_PREFIX.encode('utf-8')).hexdigest()
 
 def get_cache_backend(cache_name):
     # type: (Optional[str]) -> BaseCache
@@ -151,7 +153,7 @@ def cache_with_key(keyfunc, cache_name=None, timeout=None, with_statsd_key=None)
         # type: (Callable[..., Any]) -> (Callable[..., Any])
         @wraps(func)
         def func_with_caching(*args, **kwargs):
-            # type: (*Any, **Any) -> Callable[..., Any]
+            # type: (*Any, **Any) -> Any
             key = keyfunc(*args, **kwargs)
 
             val = cache_get(key, cache_name=cache_name)
@@ -244,18 +246,18 @@ def cache_delete_many(items, cache_name=None):
 #   value for cache (in case the values that we're caching are some
 #   function of the objects, not the objects themselves)
 ObjKT = TypeVar('ObjKT', int, Text)
-ItemT = Any # https://github.com/python/mypy/issues/1721
-CompressedItemT = Any # https://github.com/python/mypy/issues/1721
-def generic_bulk_cached_fetch(cache_key_function, # type: Callable[[ObjKT], Text]
-                              query_function, # type: Callable[[List[ObjKT]], Iterable[Any]]
-                              object_ids, # type: Iterable[ObjKT]
-                              extractor=lambda obj: obj, # type: Callable[[CompressedItemT], ItemT]
-                              setter=lambda obj: obj, # type: Callable[[ItemT], CompressedItemT]
-                              id_fetcher=lambda obj: obj.id, # type: Callable[[Any], ObjKT]
-                              cache_transformer=lambda obj: obj # type: Callable[[Any], ItemT]
+ItemT = Any  # https://github.com/python/mypy/issues/1721
+CompressedItemT = Any  # https://github.com/python/mypy/issues/1721
+def generic_bulk_cached_fetch(cache_key_function,  # type: Callable[[ObjKT], Text]
+                              query_function,  # type: Callable[[List[ObjKT]], Iterable[Any]]
+                              object_ids,  # type: Iterable[ObjKT]
+                              extractor=lambda obj: obj,  # type: Callable[[CompressedItemT], ItemT]
+                              setter=lambda obj: obj,  # type: Callable[[ItemT], CompressedItemT]
+                              id_fetcher=lambda obj: obj.id,  # type: Callable[[Any], ObjKT]
+                              cache_transformer=lambda obj: obj  # type: Callable[[Any], ItemT]
                               ):
     # type: (...) -> Dict[ObjKT, Any]
-    cache_keys = {} # type: Dict[ObjKT, Text]
+    cache_keys = {}  # type: Dict[ObjKT, Text]
     for object_id in object_ids:
         cache_keys[object_id] = cache_key_function(object_id)
     cached_objects = cache_get_many([cache_keys[object_id]
@@ -266,7 +268,7 @@ def generic_bulk_cached_fetch(cache_key_function, # type: Callable[[ObjKT], Text
                   cache_keys[object_id] not in cached_objects]
     db_objects = query_function(needed_ids)
 
-    items_for_remote_cache = {} # type: Dict[Text, Any]
+    items_for_remote_cache = {}  # type: Dict[Text, Any]
     for obj in db_objects:
         key = cache_keys[id_fetcher(obj)]
         item = cache_transformer(obj)
@@ -284,7 +286,7 @@ def cache(func):
        Uses a key based on the function's name, filename, and
        the repr() of its arguments."""
 
-    func_uniqifier = '%s-%s' % (func.__code__.co_filename, func.__name__) # type: ignore # https://github.com/python/mypy/issues/1923
+    func_uniqifier = '%s-%s' % (func.__code__.co_filename, func.__name__)
 
     @wraps(func)
     def keyfunc(*args, **kwargs):
@@ -306,9 +308,21 @@ def user_profile_by_email_cache_key(email):
     # with high likelihood be ASCII-only for the foreseeable future.
     return u'user_profile_by_email:%s' % (make_safe_digest(email.strip()),)
 
+def user_profile_cache_key(email, realm):
+    # type: (Text, Realm) -> Text
+    return u"user_profile:%s:%s" % (make_safe_digest(email.strip()), realm.id,)
+
+def bot_profile_cache_key(email):
+    # type: (Text) -> Text
+    return u"bot_profile:%s" % (make_safe_digest(email.strip()))
+
 def user_profile_by_id_cache_key(user_profile_id):
     # type: (int) -> Text
     return u"user_profile_by_id:%s" % (user_profile_id,)
+
+def user_profile_by_api_key_cache_key(api_key):
+    # type: (Text) -> Text
+    return u"user_profile_by_api_key:%s" % (api_key,)
 
 # TODO: Refactor these cache helpers into another file that can import
 # models.py so that python v3 style type annotations can also work.
@@ -316,30 +330,30 @@ def user_profile_by_id_cache_key(user_profile_id):
 active_user_dict_fields = [
     'id', 'full_name', 'short_name', 'email',
     'avatar_source', 'avatar_version',
-    'is_realm_admin', 'is_bot'] # type: List[str]
+    'is_realm_admin', 'is_bot', 'realm_id', 'timezone']  # type: List[str]
 
-def active_user_dicts_in_realm_cache_key(realm):
-    # type: (Realm) -> Text
-    return u"active_user_dicts_in_realm:%s" % (realm.id,)
+def active_user_dicts_in_realm_cache_key(realm_id):
+    # type: (int) -> Text
+    return u"active_user_dicts_in_realm:%s" % (realm_id,)
 
-bot_dict_fields = ['id', 'full_name', 'short_name', 'email',
+def active_user_ids_cache_key(realm_id):
+    # type: (int) -> Text
+    return u"active_user_ids:%s" % (realm_id,)
+
+bot_dict_fields = ['id', 'full_name', 'short_name', 'bot_type', 'email',
                    'is_active', 'default_sending_stream__name',
+                   'realm_id',
                    'default_events_register_stream__name',
                    'default_all_public_streams', 'api_key',
                    'bot_owner__email', 'avatar_source',
-                   'avatar_version'] # type: List[str]
+                   'avatar_version']  # type: List[str]
 
 def bot_dicts_in_realm_cache_key(realm):
     # type: (Realm) -> Text
     return u"bot_dicts_in_realm:%s" % (realm.id,)
 
-def get_stream_cache_key(stream_name, realm):
-    # type: (Text, Union[Realm, int]) -> Text
-    from zerver.models import Realm
-    if isinstance(realm, Realm):
-        realm_id = realm.id
-    else:
-        realm_id = realm
+def get_stream_cache_key(stream_name, realm_id):
+    # type: (Text, int) -> Text
     return u"stream_by_realm_and_name:%s:%s" % (
         realm_id, make_safe_digest(stream_name.strip().lower()))
 
@@ -349,6 +363,8 @@ def delete_user_profile_caches(user_profiles):
     for user_profile in user_profiles:
         keys.append(user_profile_by_email_cache_key(user_profile.email))
         keys.append(user_profile_by_id_cache_key(user_profile.id))
+        keys.append(user_profile_by_api_key_cache_key(user_profile.api_key))
+        keys.append(user_profile_cache_key(user_profile.email, user_profile.realm))
 
     cache_delete_many(keys)
 
@@ -372,7 +388,11 @@ def flush_user_profile(sender, **kwargs):
     if kwargs.get('update_fields') is None or \
             len(set(active_user_dict_fields + ['is_active', 'email']) &
                 set(kwargs['update_fields'])) > 0:
-        cache_delete(active_user_dicts_in_realm_cache_key(user_profile.realm))
+        cache_delete(active_user_dicts_in_realm_cache_key(user_profile.realm_id))
+
+    if kwargs.get('update_fields') is None or \
+            ('is_active' in kwargs['update_fields']):
+        cache_delete(active_user_ids_cache_key(user_profile.realm_id))
 
     if kwargs.get('updated_fields') is None or \
             'email' in kwargs['update_fields']:
@@ -399,7 +419,8 @@ def flush_realm(sender, **kwargs):
     delete_user_profile_caches(users)
 
     if realm.deactivated:
-        cache_delete(active_user_dicts_in_realm_cache_key(realm))
+        cache_delete(active_user_dicts_in_realm_cache_key(realm.id))
+        cache_delete(active_user_ids_cache_key(realm.id))
         cache_delete(bot_dicts_in_realm_cache_key(realm))
         cache_delete(realm_alert_words_cache_key(realm))
 
@@ -414,7 +435,7 @@ def flush_stream(sender, **kwargs):
     from zerver.models import UserProfile
     stream = kwargs['instance']
     items_for_remote_cache = {}
-    items_for_remote_cache[get_stream_cache_key(stream.name, stream.realm)] = (stream,)
+    items_for_remote_cache[get_stream_cache_key(stream.name, stream.realm_id)] = (stream,)
     cache_set_many(items_for_remote_cache)
 
     if kwargs.get('update_fields') is None or 'name' in kwargs['update_fields'] and \

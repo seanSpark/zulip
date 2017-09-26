@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Nagios plugin to check that our MIT users' Zephyr mirrors are running.
@@ -18,7 +18,7 @@ sys.path.append('/home/zulip/deployments/current')
 import scripts.lib.setup_path_on_import
 
 import django
-from django.utils import timezone
+from django.utils.timezone import now as timezone_now
 
 os.environ['DJANGO_SETTINGS_MODULE'] = "zproject.settings"
 sys.path.append('/home/zulip/deployments/current')
@@ -36,7 +36,7 @@ states = {
     "WARNING": 1,
     "CRITICAL": 2,
     "UNKNOWN": 3
-} # type: Dict[str, int]
+}  # type: Dict[str, int]
 
 def report(state, short_msg, too_old=None):
     # type: (str, str, Set[Any]) -> None
@@ -51,7 +51,7 @@ def report(state, short_msg, too_old=None):
 
     exit(states[state])
 
-now = timezone.now()
+now = timezone_now()
 
 all_users = UserActivity.objects.filter(query__in=["get_events_backend", "/api/v1/events"],
                                         client__name="zephyr_mirror")

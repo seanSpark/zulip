@@ -16,16 +16,12 @@ i18n.init({
     resources: {
         fr: {
             translation: {
-                "Quote and reply": "French",
-                "You'll receive notifications when a message arrives and Zulip isn't in focus or the message is offscreen.": "Some French text with Zulip",
+                "Quote and reply": "French translation",
+                "Notifications are triggered when a message arrives and Zulip isn't in focus or the message is offscreen.": "Some French text with Zulip",
             },
         },
     },
 });
-
-var jsdom = require("jsdom");
-var window = jsdom.jsdom().defaultView;
-global.$ = require('jquery')(window);
 
 (function test_t_tag() {
     var args = {
@@ -41,26 +37,23 @@ global.$ = require('jquery')(window);
         narrowed: true,
     };
 
-    var html = '<div style="height: 250px">';
-    html += global.render_template('actions_popover_content', args);
-    html += "</div>";
-    var link = $(html).find("a.respond_button");
-    assert.equal(link.text().trim(), 'French');
-    global.write_test_output("actions_popover_content.handlebars", html);
+    var html = global.render_template('actions_popover_content', args);
+    assert(html.indexOf("French translation") > 0);
 }());
 
 (function test_tr_tag() {
     var args = {
         page_params: {
-            fullname: "John Doe",
+            full_name: "John Doe",
             password_auth_enabled: false,
             avatar_url: "http://example.com",
             left_side_userlist: false,
             twenty_four_hour_time: false,
-            stream_desktop_notifications_enabled: false,
-            stream_sounds_enabled: false,
-            desktop_notifications_enabled: false,
-            sounds_enabled: false,
+            enable_stream_desktop_notifications: false,
+            enable_stream_push_notifications: false,
+            enable_stream_sounds: false,
+            enable_desktop_notifications: false,
+            enable_sounds: false,
             enable_offline_email_notifications: false,
             enable_offline_push_notifications: false,
             enable_online_push_notifications: false,
@@ -71,7 +64,5 @@ global.$ = require('jquery')(window);
     };
 
     var html = global.render_template('settings_tab', args);
-    var div = $(html).find("div.notification-reminder");
-    assert.equal(div.text().trim(), 'Some French text with Zulip');
-    global.write_test_output("test_tr_tag settings", html);
+    assert(html.indexOf('Some French text with Zulip') > 0);
 }());

@@ -58,7 +58,20 @@ class zulip::app_frontend_base {
     }
   }
 
+  # This determines whether we run queue processors multithreaded or
+  # multiprocess.  Multiprocess scales much better, but requires more
+  # RAM; we just auto-detect based on available system RAM.
+  $queues_multiprocess = $::memorysize_mb > 3500
   $queues = $zulip::base::normal_queues
+  if $queues_multiprocess {
+    $message_sender_default_processes = 4
+    $uwsgi_default_processes = 6
+  } else {
+    $message_sender_default_processes = 2
+    $uwsgi_default_processes = 4
+  }
+  $message_sender_processes = zulipconf("application_server", "message_sender_processes",
+                                        $message_sender_default_processes)
   file { "/etc/supervisor/conf.d/zulip.conf":
     require => Package[supervisor],
     ensure => file,
@@ -69,7 +82,8 @@ class zulip::app_frontend_base {
     notify => Service["supervisor"],
   }
 
-  $uwsgi_processes = zulipconf("application_server", "uwsgi_processes", "5")
+  $uwsgi_processes = zulipconf("application_server", "uwsgi_processes",
+                               $uwsgi_default_processes)
   file { "/etc/zulip/uwsgi.ini":
     require => Package[supervisor],
     ensure => file,

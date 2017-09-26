@@ -63,8 +63,31 @@ var draft_model = (function () {
 
 exports.draft_model = draft_model;
 
+exports.snapshot_message = function () {
+    if (!compose_state.composing() || (compose_state.message_content() === "")) {
+        // If you aren't in the middle of composing the body of a
+        // message, don't try to snapshot.
+        return;
+    }
+
+    // Save what we can.
+    var message = {
+        type: compose_state.get_message_type(),
+        content: compose_state.message_content(),
+    };
+    if (message.type === "private") {
+        var recipient = compose_state.recipient();
+        message.reply_to = recipient;
+        message.private_message_recipient = recipient;
+    } else {
+        message.stream = compose_state.stream_name();
+        message.subject = compose_state.subject();
+    }
+    return message;
+};
+
 exports.update_draft = function () {
-    var draft = compose.snapshot_message();
+    var draft = drafts.snapshot_message();
     var draft_id = $("#new_message_content").data("draft-id");
 
     if (draft_id !== undefined) {
@@ -105,13 +128,26 @@ exports.restore_draft = function (draft_id) {
                               draft_copy);
     }
 
-    modals.close_modal("drafts");
+    if (draft.type === "stream") {
+        if (draft.stream !== "") {
+            narrow.activate([{operator: "stream", operand: draft.stream},
+                             {operator: "topic", operand: draft.subject}],
+                             {select_first_unread: true, trigger: "restore draft"});
+        }
+    } else {
+        if (draft.private_message_recipient !== "") {
+            narrow.activate([{operator: "pm-with", operand: draft.private_message_recipient}],
+                             {select_first_unread: true, trigger: "restore draft"});
+        }
+    }
+
+    overlays.close_overlay("drafts");
     compose_fade.clear_compose();
     if (draft.type === "stream" && draft.stream === "") {
         draft_copy.subject = "";
     }
-    compose.start(draft_copy.type, draft_copy);
-    compose.autosize_textarea();
+    compose_actions.start(draft_copy.type, draft_copy);
+    compose_ui.autosize_textarea();
     $("#new_message_content").data("draft-id", draft_id);
 };
 
@@ -146,15 +182,20 @@ exports.setup_page = function (callback) {
                 // single space char for proper rendering of the stream label
                 var space_string = new Handlebars.SafeString("&nbsp;");
                 var stream = (draft.stream.length > 0 ? draft.stream : space_string);
+                var draft_topic = draft.subject.length === 0 ?
+                        compose.empty_topic_placeholder() : draft.subject;
+
                 formatted = {
                     draft_id: id,
                     is_stream: true,
                     stream: stream,
                     stream_color: stream_data.get_color(draft.stream),
-                    topic: draft.subject,
+                    topic: draft_topic,
                     raw_content: draft.content,
+
                 };
-                echo.apply_markdown(formatted);
+
+                markdown.apply_markdown(formatted);
             } else {
                 var emails = util.extract_pm_recipients(draft.private_message_recipient);
                 var recipients = _.map(emails, function (email) {
@@ -172,7 +213,7 @@ exports.setup_page = function (callback) {
                     recipients: recipients,
                     raw_content: draft.content,
                 };
-                echo.apply_markdown(formatted);
+                markdown.apply_markdown(formatted);
             }
             return formatted;
         });
@@ -203,19 +244,165 @@ exports.setup_page = function (callback) {
     populate_and_fill();
 };
 
+exports.drafts_overlay_open = function () {
+    return $("#draft_overlay").hasClass("show");
+};
+
+function drafts_initialize_focus(event_name) {
+    // If a draft is not focused in draft modal, then focus the last draft
+    // if up_arrow is clicked or the first draft if down_arrow is clicked.
+    if (event_name !== "up_arrow" && event_name !== "down_arrow" || $(".draft-info-box:focus")[0]) {
+        return;
+    }
+
+    var draft_arrow = draft_model.get();
+    var draft_id_arrow = Object.getOwnPropertyNames(draft_arrow);
+    if (draft_id_arrow.length === 0) { // empty drafts modal
+        return;
+    }
+
+    var draft_element;
+    if (event_name === "up_arrow") {
+        draft_element = document.querySelectorAll('[data-draft-id="' + draft_id_arrow[draft_id_arrow.length-1] + '"]');
+    } else if (event_name === "down_arrow") {
+        draft_element = document.querySelectorAll('[data-draft-id="' + draft_id_arrow[0] + '"]');
+    }
+    var focus_element = draft_element[0].children[0];
+    focus_element.focus();
+}
+
+function drafts_scroll(next_focus_draft_row) {
+    if (next_focus_draft_row[0] === undefined) {
+        return;
+    }
+    if (next_focus_draft_row[0].children[0] === undefined) {
+        return;
+    }
+    next_focus_draft_row[0].children[0].focus();
+
+    // If focused draft is first draft, scroll to the top.
+    if ($(".draft-info-box:first")[0].parentElement === next_focus_draft_row[0]) {
+        $(".drafts-list")[0].scrollTop = 0;
+    }
+
+    // If focused draft is the last draft, scroll to the bottom.
+    if ($(".draft-info-box:last")[0].parentElement === next_focus_draft_row[0]) {
+        $(".drafts-list")[0].scrollTop = $('.drafts-list')[0].scrollHeight - $('.drafts-list').height();
+    }
+
+    // If focused draft is cut off from the top, scroll up halfway in draft modal.
+    if (next_focus_draft_row.position().top < 55) {
+        // 55 is the minimum distance from the top that will require extra scrolling.
+        $(".drafts-list")[0].scrollTop -= $(".drafts-list")[0].clientHeight / 2;
+    }
+
+    // If focused draft is cut off from the bottom, scroll down halfway in draft modal.
+    var dist_from_top = next_focus_draft_row.position().top;
+    var total_dist = dist_from_top + next_focus_draft_row[0].clientHeight;
+    var dist_from_bottom = $(".drafts-container")[0].clientHeight - total_dist;
+    if (dist_from_bottom < -4) {
+        //-4 is the min dist from the bottom that will require extra scrolling.
+        $(".drafts-list")[0].scrollTop += $(".drafts-list")[0].clientHeight / 2;
+    }
+}
+
+exports.drafts_handle_events = function (e, event_key) {
+    var draft_arrow = draft_model.get();
+    var draft_id_arrow = Object.getOwnPropertyNames(draft_arrow);
+    drafts_initialize_focus(event_key);
+
+    // This detects up arrow key presses when the draft overlay
+    // is open and scrolls through the drafts.
+    if (event_key === "up_arrow") {
+        var focus_draft_up_row = $(".draft-info-box:focus")[0].parentElement;
+        var prev_focus_draft_row = $(focus_draft_up_row).prev();
+        drafts_scroll(prev_focus_draft_row);
+    }
+
+    // This detects down arrow key presses when the draft overlay
+    // is open and scrolls through the drafts.
+    if (event_key === "down_arrow") {
+        var focus_draft_down_row = $(".draft-info-box:focus")[0].parentElement;
+        var next_focus_draft_row = $(focus_draft_down_row).next();
+        drafts_scroll(next_focus_draft_row);
+    }
+
+    var elt = document.activeElement;
+    var focused_draft = $(elt.parentElement)[0].getAttribute("data-draft-id");
+    // Allows user to delete drafts with backspace
+    if (event_key === "backspace") {
+        if (elt.parentElement.hasAttribute("data-draft-id")) {
+            var focus_draft_back_row = $(elt)[0].parentElement;
+            var backnext_focus_draft_row = $(focus_draft_back_row).next();
+            var backprev_focus_draft_row = $(focus_draft_back_row).prev();
+            var delete_id;
+            if (backnext_focus_draft_row[0] !== undefined) {
+                delete_id = backnext_focus_draft_row[0].getAttribute("data-draft-id");
+            } else if (backprev_focus_draft_row[0] !== undefined) {
+                delete_id = backprev_focus_draft_row[0].getAttribute("data-draft-id");
+            }
+            drafts.draft_model.deleteDraft(focused_draft);
+            document.activeElement.parentElement.remove();
+            var new_focus_element = document.querySelectorAll('[data-draft-id="' + delete_id + '"]');
+            if (new_focus_element[0] !== undefined) {
+                new_focus_element[0].children[0].focus();
+            }
+            if ($("#drafts_table .draft-row").length === 0) {
+                $('#drafts_table .no-drafts').show();
+            }
+        }
+    }
+
+    // This handles when pressing enter while looking at drafts.
+    // It restores draft that is focused.
+    if (event_key === "enter") {
+        if (document.activeElement.parentElement.hasAttribute("data-draft-id")) {
+            exports.restore_draft(focused_draft);
+        } else {
+            var first_draft = draft_id_arrow[draft_id_arrow.length-1];
+            exports.restore_draft(first_draft);
+        }
+    }
+};
+
+exports.toggle = function () {
+    if (exports.drafts_overlay_open()) {
+        overlays.close_overlay("drafts");
+    } else {
+        exports.launch();
+    }
+};
+
 exports.launch = function () {
     exports.setup_page(function () {
+        overlays.open_overlay({
+            name: 'drafts',
+            overlay: $('#draft_overlay'),
+            on_close: function () {
+                hashchange.exit_overlay();
+            },
+        });
+
         $("#draft_overlay").addClass("show");
+        var draft_list = drafts.draft_model.get();
+        var draft_id_list = Object.getOwnPropertyNames(draft_list);
+        if (draft_id_list.length > 0) {
+            var last_draft = draft_id_list[draft_id_list.length-1];
+            var last_draft_element = document.querySelectorAll('[data-draft-id="' + last_draft + '"]');
+            var focus_element = last_draft_element[0].children[0];
+            focus_element.focus();
+            $(".drafts-list")[0].scrollTop = $('.drafts-list')[0].scrollHeight - $('.drafts-list').height();
+        }
     });
 };
 
-$(function () {
+exports.initialize = function () {
     window.addEventListener("beforeunload", function () {
         exports.update_draft();
     });
 
     $("#new_message_content").focusout(exports.update_draft);
-});
+};
 
 return exports;
 

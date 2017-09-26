@@ -9,6 +9,11 @@ function timestamp_ms() {
 var last_topic_update = 0;
 
 exports.rerender = function () {
+    // Note: We tend to optimistically rerender muting preferences before
+    // the back end actually acknowledges the mute.  This gives a more
+    // immediate feel to the user, and if the back end fails temporarily,
+    // re-doing a mute or unmute is a pretty recoverable thing.
+
     stream_list.update_streams_sidebar();
     current_msg_list.rerender_after_muting_changes();
     if (current_msg_list !== home_msg_list) {
@@ -55,7 +60,7 @@ exports.notify_with_undo_option = (function () {
           meta.$mute.find("#unmute").click(function () {
               // it should reference the meta variable and not get stuck with
               // a pass-by-value of stream, topic.
-              stream_popover.topic_ops.unmute(meta.stream, meta.topic);
+              exports.unmute(meta.stream, meta.topic);
               animate.fadeOut();
           });
         }
@@ -85,17 +90,35 @@ exports.notify_with_undo_option = (function () {
     };
 }());
 
-exports.persist_and_rerender = function () {
-    // Optimistically rerender our new muting preferences.  The back
-    // end should eventually save it, and if it doesn't, it's a recoverable
-    // error--the user can just mute the topic again, and the topic might
-    // die down before the next reload anyway, making the muting moot.
-    exports.rerender();
+exports.dismiss_mute_confirmation = function () {
+    var $mute = $("#unmute_muted_topic_notification");
+    if ($mute) {
+        $mute.fadeOut(500).removeClass("show");
+    }
+};
+
+exports.persist_mute = function (stream_name, topic_name) {
     var data = {
-        muted_topics: JSON.stringify(muting.get_muted_topics()),
+        stream: stream_name,
+        topic: topic_name,
+        op: 'add',
     };
     last_topic_update = timestamp_ms();
-    channel.post({
+    channel.patch({
+        url: '/json/users/me/subscriptions/muted_topics',
+        idempotent: true,
+        data: data,
+    });
+};
+
+exports.persist_unmute = function (stream_name, topic_name) {
+    var data = {
+        stream: stream_name,
+        topic: topic_name,
+        op: 'remove',
+    };
+    last_topic_update = timestamp_ms();
+    channel.patch({
         url: '/json/users/me/subscriptions/muted_topics',
         idempotent: true,
         data: data,
@@ -136,6 +159,35 @@ exports.set_up_muted_topics_ui = function (muted_topics) {
         var row = templates.render('muted_topic_ui_row', {stream: list[0], topic: list[1]});
         muted_topics_table.append(row);
     });
+};
+
+exports.mute = function (stream, topic) {
+    stream_popover.hide_topic_popover();
+    exports.mute_topic(stream, topic);
+    exports.rerender();
+    exports.persist_mute(stream, topic);
+    exports.notify_with_undo_option(stream, topic);
+    exports.set_up_muted_topics_ui(muting.get_muted_topics());
+};
+
+exports.unmute = function (stream, topic) {
+    // we don't run a unmute_notify function because it isn't an issue as much
+    // if someone accidentally unmutes a stream rather than if they mute it
+    // and miss out on info.
+    stream_popover.hide_topic_popover();
+    exports.unmute_topic(stream, topic);
+    exports.rerender();
+    exports.persist_unmute(stream, topic);
+    exports.set_up_muted_topics_ui(muting.get_muted_topics());
+    exports.dismiss_mute_confirmation();
+};
+
+exports.toggle_mute = function (msg) {
+    if (muting.is_topic_muted(msg.stream, msg.subject)) {
+        exports.unmute(msg.stream, msg.subject);
+    } else if (msg.type === 'stream') {
+        exports.mute(msg.stream, msg.subject);
+    }
 };
 
 $(function () {

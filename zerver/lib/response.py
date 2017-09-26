@@ -5,7 +5,7 @@ import ujson
 
 from typing import Optional, Any, Dict, List, Text
 from zerver.lib.str_utils import force_bytes
-
+from zerver.lib.exceptions import JsonableError
 
 class HttpResponseUnauthorized(HttpResponse):
     status_code = 401
@@ -28,7 +28,7 @@ def json_unauthorized(message, www_authenticate=None):
     return resp
 
 def json_method_not_allowed(methods):
-    # type: (List[Text]) -> Text
+    # type: (List[Text]) -> HttpResponseNotAllowed
     resp = HttpResponseNotAllowed(methods)
     resp.content = force_bytes(ujson.dumps({"result": "error",
                                             "msg": "Method Not Allowed",
@@ -47,6 +47,20 @@ def json_success(data=None):
     # type: (Optional[Dict[str, Any]]) -> HttpResponse
     return json_response(data=data)
 
+def json_response_from_error(exception):
+    # type: (JsonableError) -> HttpResponse
+    '''
+    This should only be needed in middleware; in app code, just raise.
+
+    When app code raises a JsonableError, the JsonErrorHandler
+    middleware takes care of transforming it into a response by
+    calling this function.
+    '''
+    return json_response('error',
+                         msg=exception.msg,
+                         data=exception.data,
+                         status=exception.http_status_code)
+
 def json_error(msg, data=None, status=400):
-    # type: (str, Optional[Dict[str, Any]], int) -> HttpResponse
+    # type: (Text, Optional[Dict[str, Any]], int) -> HttpResponse
     return json_response(res_type="error", msg=msg, data=data, status=status)

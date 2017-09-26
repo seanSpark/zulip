@@ -41,8 +41,9 @@ products, ordered here by which types we prefer to write:
 2. **[Python script integrations](#python-script-and-plugin-integrations)**
    (examples: SVN, Git), where we can get the service to call our integration
    (by shelling out or otherwise), passing in the required data.  Our preferred
-   model for these is to ship these integrations in our API release tarballs
-   (by writing the integration in `api/integrations`).
+   model for these is to ship these integrations in the
+   [Zulip Python API distribution](https://github.com/zulip/python-zulip-api/tree/master/zulip),
+   within the `integrations` directory there.
 
 3. **[Plugin integrations](#python-script-and-plugin-integrations)** (examples:
    Jenkins, Hubot, Trac) where the user needs to install a plugin into their
@@ -94,12 +95,16 @@ handles that incoming data.
 
 New Zulip webhook integrations can take just a few hours to write,
 including tests and documentation, if you use the right process.
-Here's how we recommend doing it:
 
-* First, use http://requestb.in/ or a similar site to capture an
+**For detailed instructions, check out the ["Hello World" webhook walkthrough](
+webhook-walkthrough.html)**.
+
+For a quick guide, read on.
+
+* First, use <http://requestb.in/> or a similar site to capture an
   example webhook payload from the service you're integrating.  You
   can use these captured payloads to create a set of test fixtures for
-  your integration under `zerver/fixtures`.
+  your integration under `zerver/webhooks/mywebhook/fixtures/`.
 
 * Then write a draft webhook handler under `zerver/webhooks/`;
   there are a lot of examples in that directory.  We recommend
@@ -137,9 +142,6 @@ Here's how we recommend doing it:
 * Finally, write documentation for the integration; there's a
   [detailed guide](#documenting-your-integration) below.
 
-See the "Hello World" example in the [webhook walkthrough](webhook-walkthrough.html) for
-a detailed look at how to write a simple webhook.
-
 ### Files that need to be created
 
 Select a name for your webhook and use it consistently. The examples below are
@@ -153,7 +155,7 @@ for a webhook named 'MyWebHook'.
   integration for use in the user interface. You can add as many images as needed
   to effectively document your webhook integration. See [Documenting your
   integration](#documenting-your-integration) for details.
-* `zerver/fixtures/mywebhook/mywebhook_messagetype.json`: Sample json payload data
+* `zerver/webhooks/mywebhook/fixtures/messagetype.json`: Sample json payload data
   used by tests. Add one fixture file per type of message supported by your
   integration. See [Testing and writing tests](testing.html) for details.
 * `zerver/webhooks/mywebhook/__init__.py`: Empty file that is obligatory
@@ -205,47 +207,5 @@ ZulipMobile/0.5.4 (Android; 4.2; maguro)
 
 ## Documenting your integration
 
-Every Zulip integration must be documented in
-`zerver/webhooks/mywebhook/doc.html` (or
-`templates/zerver/integrations.html`, for non-webhook integrations).
-Usually, this involves a few steps:
-
-* Add text explaining all of the steps required to setup the
-  integration, including what URLs to use, etc.  If there are any
-  screens in the product involved, take a few screenshots with the
-  input fields filled out with sample values in order to make the
-  instructions really easy to follow.  For the screenshots, use a bot
-  with a name like "GitHub Bot", an email address for the bot like
-  `github-bot@zulip.example.com`, and an obviously fake API key like
-  `abcdef123456790`.
-
-* Make sure you've added your integration to
-  `zerver/lib/integrations.py`; this results in your integration
-  appearing on the `/integrations` page.  You'll need to add a logo
-  image for your integration under the
-  `static/images/integrations/logos/<name>.png`, where `<name>` is the
-  name of the integration, all in lower case.
-
-* Finally, generate a message sent by the integration and take a
-  screenshot of the message to provide an example message in the
-  documentation. If your new integration is a webhook integration,
-  you can generate such a message from your test fixtures
-  using `send_webhook_fixture_message`:
-
-  ```
-  ./manage.py send_webhook_fixture_message \
-       --fixture=zerver/fixtures/pingdom/pingdom_imap_down_to_up.json \
-       '--url=/api/v1/external/pingdom?stream=stream_name&api_key=api_key'
-  ```
-
-  When generating the screenshot of a sample message, give your test
-  bot a nice name like "GitHub Bot", use the project's logo as the
-  bot's avatar, and take the screenshots showing the stream/topic bar
-  for the message, not just the message body.
-
-When writing documentation for your integration, be sure to use the
-`{{ external_api_uri }}` template variable, so that your integration
-documentation will provide the correct URL for whatever server it is
-deployed on.  If special configuration is required to set the SITE
-variable, you should document that too, inside an `{% if
-api_site_required %}` check.
+See
+[our guide for writing integration documentation](integration-docs-guide.html).

@@ -37,6 +37,21 @@ Include tilde's in a code block and wrap with blank lines:
     ~~~~
     </code></pre>
 
+Removes trailing whitespace from code blocks that cause horizontal scrolling
+    >>> import markdown
+    >>> text = '''
+    ... A paragraph before a fenced code block:
+    ...
+    ... ~~~
+    ... Fenced code block    \t\t\t\t\t\t\t
+    ... ~~~
+    ... '''
+    >>> html = markdown.markdown(text, extensions=['fenced_code'])
+    >>> print html
+    <p>A paragraph before a fenced code block:</p>
+    <pre><code>Fenced code block
+    </code></pre>
+
 Language tags:
 
     >>> text = '''
@@ -62,8 +77,13 @@ Dependencies:
 """
 
 import re
+import subprocess
 import markdown
+import six
+from django.utils.html import escape
 from markdown.extensions.codehilite import CodeHilite, CodeHiliteExtension
+from zerver.lib.str_utils import force_bytes
+from zerver.lib.tex import render_tex
 from typing import Any, Dict, Iterable, List, MutableSequence, Optional, Tuple, Union, Text
 
 # Global vars
@@ -78,7 +98,7 @@ FENCE_RE = re.compile(u"""
     (
         \\{?\\.?
         (?P<lang>
-            [a-zA-Z0-9_+-]*
+            [a-zA-Z0-9_+-./#]*
         ) # "py" or "javascript"
         \\}?
     ) # language, like ".py" or "{javascript}"
@@ -87,7 +107,7 @@ FENCE_RE = re.compile(u"""
     """, re.VERBOSE)
 
 
-CODE_WRAP = u'<pre><code%s>%s</code></pre>'
+CODE_WRAP = u'<pre><code%s>%s\n</code></pre>'
 LANG_TAG = u' class="%s"'
 
 class FencedCodeExtension(markdown.Extension):
@@ -114,13 +134,13 @@ class FencedBlockPreprocessor(markdown.preprocessors.Preprocessor):
         markdown.preprocessors.Preprocessor.__init__(self, md)
 
         self.checked_for_codehilite = False
-        self.codehilite_conf = {} # type: Dict[str, List[Any]]
+        self.codehilite_conf = {}  # type: Dict[str, List[Any]]
 
     def run(self, lines):
         # type: (Iterable[Text]) -> List[Text]
         """ Match and store Fenced Code Blocks in the HtmlStash. """
 
-        output = [] # type: List[Text]
+        output = []  # type: List[Text]
 
         class BaseHandler(object):
             def handle_line(self, line):
@@ -132,7 +152,7 @@ class FencedBlockPreprocessor(markdown.preprocessors.Preprocessor):
                 raise NotImplementedError()
 
         processor = self
-        handlers = [] # type: List[BaseHandler]
+        handlers = []  # type: List[BaseHandler]
 
         def push(handler):
             # type: (BaseHandler) -> None
@@ -170,15 +190,43 @@ class FencedBlockPreprocessor(markdown.preprocessors.Preprocessor):
             # type: (MutableSequence[Text], Text, Text) -> BaseHandler
             if lang in ('quote', 'quoted'):
                 return QuoteHandler(output, fence)
+            elif lang in ('math', 'tex', 'latex'):
+                return TexHandler(output, fence)
             else:
                 return CodeHandler(output, fence, lang)
+
+        class CodeHandler(BaseHandler):
+            def __init__(self, output, fence, lang):
+                # type: (MutableSequence[Text], Text, Text) -> None
+                self.output = output
+                self.fence = fence
+                self.lang = lang
+                self.lines = []  # type: List[Text]
+
+            def handle_line(self, line):
+                # type: (Text) -> None
+                if line.rstrip() == self.fence:
+                    self.done()
+                else:
+                    self.lines.append(line.rstrip())
+
+            def done(self):
+                # type: () -> None
+                text = '\n'.join(self.lines)
+                text = processor.format_code(self.lang, text)
+                text = processor.placeholder(text)
+                processed_lines = text.split('\n')
+                self.output.append('')
+                self.output.extend(processed_lines)
+                self.output.append('')
+                pop()
 
         class QuoteHandler(BaseHandler):
             def __init__(self, output, fence):
                 # type: (MutableSequence[Text], Text) -> None
                 self.output = output
                 self.fence = fence
-                self.lines = [] # type: List[Text]
+                self.lines = []  # type: List[Text]
 
             def handle_line(self, line):
                 # type: (Text) -> None
@@ -197,25 +245,24 @@ class FencedBlockPreprocessor(markdown.preprocessors.Preprocessor):
                 self.output.append('')
                 pop()
 
-        class CodeHandler(BaseHandler):
-            def __init__(self, output, fence, lang):
-                # type: (MutableSequence[Text], Text, Text) -> None
+        class TexHandler(BaseHandler):
+            def __init__(self, output, fence):
+                # type: (MutableSequence[Text], Text) -> None
                 self.output = output
                 self.fence = fence
-                self.lang = lang
-                self.lines = [] # type: List[Text]
+                self.lines = []  # type: List[Text]
 
             def handle_line(self, line):
                 # type: (Text) -> None
                 if line.rstrip() == self.fence:
                     self.done()
                 else:
-                    self.lines.append(line)
+                    check_for_new_fence(self.lines, line)
 
             def done(self):
                 # type: () -> None
                 text = '\n'.join(self.lines)
-                text = processor.format_code(self.lang, text)
+                text = processor.format_tex(text)
                 text = processor.placeholder(text)
                 processed_lines = text.split('\n')
                 self.output.append('')
@@ -281,6 +328,19 @@ class FencedBlockPreprocessor(markdown.preprocessors.Preprocessor):
             lines = paragraph.split("\n")
             quoted_paragraphs.append("\n".join("> " + line for line in lines if line != ''))
         return "\n\n".join(quoted_paragraphs)
+
+    def format_tex(self, text):
+        # type: (Text) -> Text
+        paragraphs = text.split("\n\n")
+        tex_paragraphs = []
+        for paragraph in paragraphs:
+            html = render_tex(paragraph, is_inline=False)
+            if html is not None:
+                tex_paragraphs.append(html)
+            else:
+                tex_paragraphs.append('<span class="tex-error">' +
+                                      escape(paragraph) + '</span>')
+        return "\n\n".join(tex_paragraphs)
 
     def placeholder(self, code):
         # type: (Text) -> Text

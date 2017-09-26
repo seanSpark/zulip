@@ -3,6 +3,7 @@
 *.jpg binary
 *.eot binary
 *.woff binary
+*.woff2 binary
 *.svg binary
 *.ttf binary
 *.png binary
@@ -11,7 +12,6 @@
 .gitignore export-ignore
 .gitattributes export-ignore
 /static/assets export-ignore
-/bots export-ignore
 /corporate export-ignore
 /static export-ignore
 /tools export-ignore
@@ -19,11 +19,7 @@
 /templates/corporate export-ignore
 /templates/zilencer export-ignore
 /puppet/zulip_internal export-ignore
-/zproject/local_settings.py export-ignore
 /zproject/test_settings.py export-ignore
 /zerver/fixtures export-ignore
 /zerver/tests export-ignore
 /frontend_tests export-ignore
-/node_modules export-ignore
-/humbug export-ignore
-/locale export-ignore

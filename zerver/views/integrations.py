@@ -4,27 +4,33 @@ from collections import OrderedDict
 from django.views.generic import TemplateView
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, HttpResponseNotFound
+from django.template import loader
 from django.shortcuts import render
 
 import os
 import ujson
 
+from zerver.decorator import has_request_variables, REQ
 from zerver.lib import bugdown
-from zerver.lib.integrations import INTEGRATIONS, HUBOT_LOZENGES
+from zerver.lib.integrations import CATEGORIES, INTEGRATIONS, HUBOT_LOZENGES
 from zerver.lib.utils import get_subdomain
+from zerver.templatetags.app_filters import render_markdown_path
 
 def add_api_uri_context(context, request):
     # type: (Dict[str, Any], HttpRequest) -> None
     if settings.REALMS_HAVE_SUBDOMAINS:
         subdomain = get_subdomain(request)
-        if subdomain:
+        if subdomain or not settings.ROOT_DOMAIN_LANDING_PAGE:
             display_subdomain = subdomain
             html_settings_links = True
         else:
             display_subdomain = 'yourZulipDomain'
             html_settings_links = False
-        external_api_path_subdomain = '%s.%s' % (display_subdomain,
-                                                 settings.EXTERNAL_API_PATH)
+        if display_subdomain != "":
+            external_api_path_subdomain = '%s.%s' % (display_subdomain,
+                                                     settings.EXTERNAL_API_PATH)
+        else:
+            external_api_path_subdomain = settings.EXTERNAL_API_PATH
     else:
         external_api_path_subdomain = settings.EXTERNAL_API_PATH
         html_settings_links = True
@@ -49,7 +55,7 @@ class APIView(ApiURLView):
 
 class HelpView(ApiURLView):
     template_name = 'zerver/help/main.html'
-    path_template = os.path.join(settings.DEPLOY_ROOT, 'templates/zerver/help/%s.md')
+    path_template = 'zerver/help/%s.md'
 
     def get_path(self, article):
         # type: (str) -> str
@@ -62,19 +68,24 @@ class HelpView(ApiURLView):
         article = kwargs["article"]
         context = super(HelpView, self).get_context_data()  # type: Dict[str, Any]
         path = self.get_path(article)
-        if os.path.exists(path):
+        try:
+            loader.get_template(path)
             context["article"] = path
-        else:
+        except loader.TemplateDoesNotExist:
             context["article"] = self.get_path("missing")
+
         # For disabling the "Back to home" on the homepage
         context["not_index_page"] = not path.endswith("/index.md")
+        context["page_is_help_center"] = True
         return context
 
     def get(self, request, article=""):
         # type: (HttpRequest, str) -> HttpResponse
         path = self.get_path(article)
         result = super(HelpView, self).get(self, article=article)
-        if not os.path.exists(path):
+        try:
+            loader.get_template(path)
+        except loader.TemplateDoesNotExist:
             # Ensure a 404 response code if no such document
             result.status_code = 404
         return result
@@ -82,14 +93,16 @@ class HelpView(ApiURLView):
 
 def add_integrations_context(context):
     # type: (Dict[str, Any]) -> None
+    alphabetical_sorted_categories = OrderedDict(sorted(CATEGORIES.items()))
     alphabetical_sorted_integration = OrderedDict(sorted(INTEGRATIONS.items()))
     alphabetical_sorted_hubot_lozenges = OrderedDict(sorted(HUBOT_LOZENGES.items()))
+    context['categories_dict'] = alphabetical_sorted_categories
     context['integrations_dict'] = alphabetical_sorted_integration
     context['hubot_lozenges_dict'] = alphabetical_sorted_hubot_lozenges
 
-    if context["html_settings_links"]:
-        settings_html = '<a href="../#settings">Zulip settings page</a>'
-        subscriptions_html = '<a target="_blank" href="../#streams">streams page</a>'
+    if "html_settings_links" in context and context["html_settings_links"]:
+        settings_html = '<a href="../../#settings">Zulip settings page</a>'
+        subscriptions_html = '<a target="_blank" href="../../#streams">streams page</a>'
     else:
         settings_html = 'Zulip settings page'
         subscriptions_html = 'streams page'
@@ -97,9 +110,15 @@ def add_integrations_context(context):
     context['settings_html'] = settings_html
     context['subscriptions_html'] = subscriptions_html
 
+    for name in alphabetical_sorted_integration:
+        alphabetical_sorted_integration[name].add_doc_context(context)
+
+    for name in alphabetical_sorted_hubot_lozenges:
+        alphabetical_sorted_hubot_lozenges[name].add_doc_context(context)
+
 
 class IntegrationView(ApiURLView):
-    template_name = 'zerver/integrations.html'
+    template_name = 'zerver/integrations/index.html'
 
     def get_context_data(self, **kwargs):
         # type: (**Any) -> Dict[str, Any]
@@ -108,9 +127,23 @@ class IntegrationView(ApiURLView):
         return context
 
 
+@has_request_variables
+def integration_doc(request, integration_name=REQ(default=None)):
+    # type: (HttpRequest, str) -> HttpResponse
+    try:
+        integration = INTEGRATIONS[integration_name]
+    except KeyError:
+        return HttpResponseNotFound()
+
+    context = integration.doc_context or {}
+    add_integrations_context(context)
+    doc_html_str = render_markdown_path(integration.doc, context)
+
+    return HttpResponse(doc_html_str)
+
 def api_endpoint_docs(request):
     # type: (HttpRequest) -> HttpResponse
-    context = {} # type: Dict[str, Any]
+    context = {}  # type: Dict[str, Any]
     add_api_uri_context(context, request)
 
     raw_calls = open('templates/zerver/api_content.json', 'r').read()

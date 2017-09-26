@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 from __future__ import absolute_import
@@ -63,7 +63,7 @@ def check_django():
 
             Make sure your shell does this at init time:
 
-            source /srv/zulip-venv/bin/activate
+            source /srv/zulip-py3-venv/bin/activate
 
             Or maybe you forget to run inside your VM?
             ''')
@@ -107,7 +107,7 @@ def check_venv():
     # type: () -> bool
     path = os.path.join(ROOT_DIR, 'scripts', 'lib', 'hash_reqs.py')
     cache_dir = '/srv/zulip-venv-cache/'
-    for fn in ['py2_dev.txt', 'py3_dev.txt']:
+    for fn in ['dev_lock.txt']:
         requirements_file = os.path.join(ROOT_DIR, "requirements", fn)
         output = subprocess.check_output([path, requirements_file], universal_newlines=True)
         sha1sum = output.split()[0]

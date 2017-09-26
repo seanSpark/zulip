@@ -5,27 +5,20 @@ from datetime import datetime
 from typing import Any, Dict, List
 from django.http import HttpRequest, HttpResponse
 from django.utils.translation import ugettext as _
+
 from zerver.lib.actions import check_send_message
+from zerver.lib.exceptions import JsonableError
 from zerver.lib.response import json_success, json_error
-from zerver.lib.request import JsonableError
 from zerver.decorator import REQ, has_request_variables, api_key_only_webhook_view
 from zerver.models import UserProfile, Client
 
-
 SUBJECT_TEMPLATE = "{service_url}"
-
-
-class UnsupportedUpdownEventType(JsonableError):
-    pass
 
 def send_message_for_event(event, user_profile, client, stream):
     # type: (Dict[str, Any], UserProfile, Client, str) -> None
-    try:
-        event_type = get_event_type(event)
-        subject = SUBJECT_TEMPLATE.format(service_url=event['check']['url'])
-        body = EVENT_TYPE_BODY_MAPPER[event_type](event)
-    except KeyError as e:
-        return json_error(_("Missing key {} in JSON").format(str(e)))
+    event_type = get_event_type(event)
+    subject = SUBJECT_TEMPLATE.format(service_url=event['check']['url'])
+    body = EVENT_TYPE_BODY_MAPPER[event_type](event)
     check_send_message(user_profile, client, 'stream', [stream], subject, body)
 
 def get_body_for_up_event(event):
@@ -68,12 +61,12 @@ def get_body_for_down_event(event):
 
 @api_key_only_webhook_view('Updown')
 @has_request_variables
-def api_updown_webhook(request, user_profile, client,
+def api_updown_webhook(request, user_profile,
                        payload=REQ(argument_type='body'),
                        stream=REQ(default='updown')):
-    # type: (HttpRequest, UserProfile, Client, List[Dict[str, Any]], str) -> HttpResponse
+    # type: (HttpRequest, UserProfile, List[Dict[str, Any]], str) -> HttpResponse
     for event in payload:
-        send_message_for_event(event, user_profile, client, stream)
+        send_message_for_event(event, user_profile, request.client, stream)
     return json_success()
 
 EVENT_TYPE_BODY_MAPPER = {
@@ -88,4 +81,4 @@ def get_event_type(event):
         event_type = event_type_match.group(1)
         if event_type in EVENT_TYPE_BODY_MAPPER:
             return event_type
-    raise UnsupportedUpdownEventType(event['event'])
+    raise JsonableError(_('Unsupported Updown event type: %s') % (event['event'],))

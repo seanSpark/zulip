@@ -8,7 +8,8 @@ important components are documented in depth in their own sections:
 - [Django](testing-with-django.html): backend Python tests
 - [Casper](testing-with-casper.html): end-to-end UI tests
 - [Node](testing-with-node.html): unit tests for JS front end code
-- [Linters](linters.html)
+- [Linters](linters.html): Our parallel linter suite
+- [Travis CI details](travis.html): How all of these run in Travis CI
 
 This document covers more general testing issues, such as how to run the
 entire test suite, how to troubleshoot database issues, how to manually
@@ -32,13 +33,13 @@ Then, to run the full Zulip test suite, do this:
 ./tools/test-all
 ```
 
-This runs the linter (`tools/lint-all`) plus all of our test suites;
+This runs the linter (`tools/lint`) plus all of our test suites;
 they can all be run separately (just read `tools/test-all` to see
 them).  You can also run individual tests which can save you a lot of
 time debugging a test failure, e.g.:
 
 ```
-./tools/lint-all # Runs all the linters in parallel
+./tools/lint # Runs all the linters in parallel
 ./tools/test-backend zerver.tests.test_bugdown.BugdownTest.test_inline_youtube
 ./tools/test-backend BugdownTest # Run `test-backend --help` for more options
 ./tools/test-js-with-casper 09-navigation.js
@@ -78,6 +79,59 @@ if you're working on new database migrations.  To do this, run:
 
 [lxc-sf]: https://github.com/fgrehm/vagrant-lxc/wiki/FAQ#help-my-shared-folders-have-the-wrong-owner
 
+### Internet access inside test suites
+
+As a policy matter, the Zulip test suites should never make outgoing
+HTTP or other network requests.  This is important for 2 major
+reasons:
+
+* Tests that make outgoing Internet requests will fail when the user
+  isn't on the Internet.
+* Tests that make outgoing Internet requests often have a hidden
+  dependency on the uptime of a third-party service, and will fail
+  nondeterministically if that service has a temporary outage.
+  Nondeterministically failing tests can be a big waste of
+  developer time, and we try to avoid them wherever possible.
+
+As a result, Zulip's major test suites should never access the
+Internet directly.  Since code in Zulip does need to access the
+Internet (e.g. to access various third-party APIs), this means that
+the Zulip tests use mocking to basically hardcode (for the purposes of
+the test) what responses should be used for any outgoing Internet
+requests that Zulip would make in the code path being tested.
+
+This is easy to do using test fixtures (a fancy word for fixed data
+used in tests) and the `mock.patch` function to specify what HTTP
+response should be used by the tests for every outgoing HTTP (or other
+network) request.  Consult
+[our guide on mocking](testing-with-django.html#zulip-mocking-practices) to
+learn how to mock network requests easily; there are also a number of
+examples throughout the codebase.
+
+We partially enforce this policy in the main Django/backend test suite
+by overriding certain library functions that are used in outgoing HTTP
+code paths (`httplib2.Http().request`, `requests.request`, etc.) to
+throw an exception in the backend tests.  While this is enforcement is
+not complete (there a lot of other ways to use the Internet from
+Python), it is easy to do and catches most common cases of new code
+dependning on Internet access.
+
+This enforcement code results in the following exception:
+
+  ```
+  File "tools/test-backend", line 120, in internet_guard
+    raise Exception("Outgoing network requests are not allowed in the Zulip tests."
+  Exception: Outgoing network requests are not allowed in the Zulip tests.
+  ...
+  ```
+
+#### Documentation tests
+
+The one exception to this policy is our documentation tests, which
+will attempt to verify that the links included in our documentation
+aren't broken.  Those tests end up failing nondeterministically fairly
+often, which is unfortunate, but there's simply no other correct way
+to verify links other than attempting to access them.
 
 ## Schema and initial data changes
 
@@ -146,27 +200,3 @@ Firebug for Firefox is also pretty good. They both have profilers, but
 Chrome's is a sampling profiler while Firebug's is an instrumenting
 profiler. Using them both can be helpful because they provide different
 information.
-
-## Python 3 Compatibility
-
-Zulip is working on supporting Python 3, and all new code in Zulip
-should be Python 2+3 compatible. We have converted most of the codebase
-to be compatible with Python 3 using a suite of 2to3 conversion tools
-and some manual work. In order to avoid regressions in that
-compatibility as we continue to develop new features in Zulip, we have a
-special tool, `tools/check-py3`, which checks all code for Python 3
-syntactic compatibility by running a subset of the automated migration
-tools and checking if they trigger any changes. `tools/check-py3` is run
-automatically in Zulip's Travis CI tests (in the 'static-analysis'
-build) to avoid any regressions, but is not included in `test-all` since
-it is quite slow.
-
-To run `tools/check-py3`, you need to install the `modernize` and
-`future` Python packages (which are included in
-`requirements/py3k.txt`, which itself is included in
-`requirements/dev.txt`, so you probably already have these packages
-installed).
-
-To run `check-py3` on just the Python files in a particular directory, you
-can change the current working directory (e.g. `cd zerver/`) and run
-`check-py3` from there.

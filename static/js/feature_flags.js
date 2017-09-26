@@ -2,25 +2,20 @@ var feature_flags = (function () {
 
 var exports = {};
 
-// Manually-flipped debugging flags
-exports.log_send_times = false;
-exports.collect_send_times = false;
-exports.local_echo = true;
+exports.load_server_counts = false;
 
 // Experimental modification to support much wider message views.
 exports.full_width = false;
 
-// Beta rewrite of the Bot UI; probably worth finishing and deploying
-exports.new_bot_ui = false;
-
 // The features below have all settled into their final states and can
 // be removed when we get a chance
-exports.cleanup_before_reload = true;
 exports.mark_read_at_bottom = true;
 exports.propagate_topic_edits = true;
 exports.clicking_notification_causes_narrow = true;
 exports.collapsible = false;
 exports.dropbox_integration = false;
+
+exports.use_server_topic_history = true;
 
 return exports;
 

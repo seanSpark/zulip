@@ -15,20 +15,12 @@
                 <div class="edit-bot-form-box">
                     <div class="">
                         <label for="edit_bot_name">{{ _("Full name") }}</label>
-                        <input type="text" name="bot_name" class="edit_bot_name required" maxlength=50 />
+                        <input id="edit_bot_name" type="text" name="bot_name" class="edit_bot_name required" maxlength=50 />
                         <div><label for="edit_bot_name" generated="true" class="text-error"></label></div>
                     </div>
                     <div class="edit-bot-owner">
                         <label for="bot_owner_select">{{ _("Owner") }}</label>
                         <div class="select-form"></div>
-                    </div>
-                    <div class=" new-bot-ui">
-                        <label for="edit_bot_default_sending_stream">{{ _("Send to stream") }}</label>
-                        <select name="bot_default_sending_stream" class="edit_bot_default_sending_stream"></select>
-                    </div>
-                    <div class=" new-bot-ui">
-                        <label for="edit_bot_default_events_register_stream">{{ _("Listen on") }}</label>
-                        <select name="bot_default_events_register_stream" class="edit_bot_default_events_register_stream"></select>
                     </div>
                     <div class="avatar-section">
                         <label for="bot_avatar_file_input">Avatar</label>
@@ -40,7 +32,7 @@
                     </div>
                     <div class="buttons">
                         <input type="submit" class="btn btn-primary edit_bot_button" value="{{ _('Save') }}" />
-                        <button type="button" class="btn btn-default reset_edit_bot" data-sidebar-form-close>Cancel</button>
+                        <button type="button" class="btn btn-default reset_edit_bot" data-sidebar-form-close>{{ _('Cancel') }}</button>
                         <div class="edit_bot_spinner"></div>
                     </div>
                 </div>

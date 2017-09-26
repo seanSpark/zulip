@@ -6,9 +6,8 @@ from django.shortcuts import render
 from typing import Callable
 
 from confirmation.models import Confirmation
-from zerver.lib.actions import do_change_enable_offline_email_notifications, \
-    do_change_enable_digest_emails, clear_followup_emails_queue
-from zerver.models import UserProfile
+from zerver.lib.actions import do_change_notification_settings, clear_scheduled_emails
+from zerver.models import UserProfile, ScheduledEmail
 from zerver.context_processors import common_context
 
 def process_unsubscribe(request, token, subscription_type, unsubscribe_function):
@@ -29,15 +28,15 @@ def process_unsubscribe(request, token, subscription_type, unsubscribe_function)
 
 def do_missedmessage_unsubscribe(user_profile):
     # type: (UserProfile) -> None
-    do_change_enable_offline_email_notifications(user_profile, False)
+    do_change_notification_settings(user_profile, 'enable_offline_email_notifications', False)
 
 def do_welcome_unsubscribe(user_profile):
     # type: (UserProfile) -> None
-    clear_followup_emails_queue(user_profile.email)
+    clear_scheduled_emails(user_profile.id, ScheduledEmail.WELCOME)
 
 def do_digest_unsubscribe(user_profile):
     # type: (UserProfile) -> None
-    do_change_enable_digest_emails(user_profile, False)
+    do_change_notification_settings(user_profile, 'enable_digest_emails', False)
 
 # The keys are part of the URL for the unsubscribe link and must be valid
 # without encoding.
@@ -50,10 +49,10 @@ email_unsubscribers = {
 }
 
 # Login NOT required. These are for one-click unsubscribes.
-def email_unsubscribe(request, type, token):
+def email_unsubscribe(request, email_type, confirmation_key):
     # type: (HttpRequest, str, str) -> HttpResponse
-    if type in email_unsubscribers:
-        display_name, unsubscribe_function = email_unsubscribers[type]
-        return process_unsubscribe(request, token, display_name, unsubscribe_function)
+    if email_type in email_unsubscribers:
+        display_name, unsubscribe_function = email_unsubscribers[email_type]
+        return process_unsubscribe(request, confirmation_key, display_name, unsubscribe_function)
 
     return render(request, 'zerver/unsubscribe_link_error.html')

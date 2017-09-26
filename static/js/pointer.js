@@ -61,13 +61,12 @@ exports.fast_forward_pointer = function () {
         url: '/json/users/me',
         idempotent: true,
         success: function (data) {
-            unread_ui.mark_all_as_read(function () {
+            unread_ops.mark_all_as_read(function () {
                 pointer.furthest_read = data.max_message_id;
                 unconditionally_send_pointer_update().then(function () {
-                    ui.change_tab_to('#home');
                     reload.initiate({immediate: true,
                                      save_pointer: false,
-                                     save_narrow: false,
+                                     save_narrow: true,
                                      save_compose: true});
                 });
             });
@@ -75,80 +74,8 @@ exports.fast_forward_pointer = function () {
     });
 };
 
-exports.keep_pointer_in_view = function () {
-    // See message_viewport.recenter_view() for related logic to keep the pointer onscreen.
-    // This function mostly comes into place for mouse scrollers, and it
-    // keeps the pointer in view.  For people who purely scroll with the
-    // mouse, the pointer is kind of meaningless to them, but keyboard
-    // users will occasionally do big mouse scrolls, so this gives them
-    // a pointer reasonably close to the middle of the screen.
-    var candidate;
-    var next_row = current_msg_list.selected_row();
-
-    if (next_row.length === 0) {
-        return;
-    }
-
-    var info = message_viewport.message_viewport_info();
-    var top_threshold = info.visible_top + (1/10 * info.visible_height);
-    var bottom_threshold = info.visible_top + (9/10 * info.visible_height);
-
-    function message_is_far_enough_down() {
-        if (message_viewport.at_top()) {
-            return true;
-        }
-
-        var message_top = next_row.offset().top;
-
-        // If the message starts after the very top of the screen, we just
-        // leave it alone.  This avoids bugs like #1608, where overzealousness
-        // about repositioning the pointer can cause users to miss messages.
-        if (message_top >= info.visible_top) {
-            return true;
-        }
-
-
-        // If at least part of the message is below top_threshold (10% from
-        // the top), then we also leave it alone.
-        var bottom_offset = message_top + next_row.outerHeight(true);
-        if (bottom_offset >= top_threshold) {
-            return true;
-        }
-
-        // If we got this far, the message is not "in view."
-        return false;
-    }
-
-    function message_is_far_enough_up() {
-        return message_viewport.at_bottom() ||
-            (next_row.offset().top <= bottom_threshold);
-    }
-
-    function adjust(in_view, get_next_row) {
-        // return true only if we make an actual adjustment, so
-        // that we know to short circuit the other direction
-        if (in_view(next_row)) {
-            return false;  // try other side
-        }
-        while (!in_view(next_row)) {
-            candidate = get_next_row(next_row);
-            if (candidate.length === 0) {
-                break;
-            }
-            next_row = candidate;
-        }
-        return true;
-    }
-
-    if (!adjust(message_is_far_enough_down, rows.next_visible)) {
-        adjust(message_is_far_enough_up, rows.prev_visible);
-    }
-
-    current_msg_list.select_id(rows.id(next_row), {from_scroll: true});
-};
-
 exports.initialize = function initialize() {
-    pointer.server_furthest_read = page_params.initial_pointer;
+    pointer.server_furthest_read = page_params.pointer;
     if (page_params.orig_initial_pointer !== undefined &&
         page_params.orig_initial_pointer > pointer.server_furthest_read) {
         pointer.server_furthest_read = page_params.orig_initial_pointer;
@@ -169,9 +96,11 @@ exports.initialize = function initialize() {
         // Additionally, don't advance the pointer server-side
         // if the selected message is local-only
         if (event.msg_list === home_msg_list && page_params.narrow_stream === undefined) {
-            if (event.id > pointer.furthest_read &&
-                home_msg_list.get(event.id).local_id === undefined) {
-                pointer.furthest_read = event.id;
+            if (event.id > pointer.furthest_read) {
+                var msg = home_msg_list.get(event.id);
+                if (!msg.locally_echoed) {
+                    pointer.furthest_read = event.id;
+                }
             }
         }
 
@@ -183,7 +112,7 @@ exports.initialize = function initialize() {
             } else {
                 messages = event.msg_list.message_range(event.previously_selected, event.id);
             }
-            unread_ui.mark_messages_as_read(messages, {from: 'pointer'});
+            unread_ops.mark_messages_as_read(messages, {from: 'pointer'});
         }
     });
 };

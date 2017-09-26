@@ -8,28 +8,19 @@ import select
 from tornado import ioloop
 from django.conf import settings
 
-try:
-    # Tornado 2.4
-    orig_poll_impl = ioloop._poll # type: ignore # cross-version type variation is hard for mypy
+from tornado.ioloop import IOLoop, PollIOLoop
+# There isn't a good way to get at what the underlying poll implementation
+# will be without actually constructing an IOLoop, so we just assume it will
+# be epoll.
+orig_poll_impl = select.epoll
 
-    def instrument_tornado_ioloop():
-        # type: () -> None
-        ioloop._poll = InstrumentedPoll # type: ignore # cross-version type variation is hard for mypy
-except Exception:
-    # Tornado 3
-    from tornado.ioloop import IOLoop, PollIOLoop
-    # There isn't a good way to get at what the underlying poll implementation
-    # will be without actually constructing an IOLoop, so we just assume it will
-    # be epoll.
-    orig_poll_impl = select.epoll # type: ignore # There is no stub for select.epoll on python 3
+class InstrumentedPollIOLoop(PollIOLoop):
+    def initialize(self, **kwargs):  # type: ignore # TODO investigate likely buggy monkey patching here
+        super(InstrumentedPollIOLoop, self).initialize(impl=InstrumentedPoll(), **kwargs)
 
-    class InstrumentedPollIOLoop(PollIOLoop):
-        def initialize(self, **kwargs): # type: ignore # TODO investigate likely buggy monkey patching here
-            super(InstrumentedPollIOLoop, self).initialize(impl=InstrumentedPoll(), **kwargs)
-
-    def instrument_tornado_ioloop():
-        # type: () -> None
-        IOLoop.configure(InstrumentedPollIOLoop)
+def instrument_tornado_ioloop():
+    # type: () -> None
+    IOLoop.configure(InstrumentedPollIOLoop)
 
 # A hack to keep track of how much time we spend working, versus sleeping in
 # the event loop.
@@ -43,7 +34,7 @@ class InstrumentedPoll(object):
     def __init__(self):
         # type: () -> None
         self._underlying = orig_poll_impl()
-        self._times = [] # type: List[Tuple[float, float]]
+        self._times = []  # type: List[Tuple[float, float]]
         self._last_print = 0.0
 
     # Python won't let us subclass e.g. select.epoll, so instead
@@ -79,7 +70,7 @@ class InstrumentedPoll(object):
             in_poll = sum(b-a for a, b in self._times)
             if total > 0:
                 percent_busy = 100 * (1 - in_poll / total)
-                if settings.PRODUCTION or percent_busy > 20:
+                if settings.PRODUCTION:
                     logging.info('Tornado %5.1f%% busy over the past %4.1f seconds'
                                  % (percent_busy, total))
                     self._last_print = t1

@@ -12,7 +12,11 @@ from bs4 import BeautifulSoup
 # this list without any modification.
 IGNORED_PHRASES = [
     # Proper nouns and acronyms
+    r"Android",
     r"API",
+    r"APNS",
+    r"App Store",
+    r"Botserver",
     r"Cookie Bot",
     r"Dropbox",
     r"GitHub",
@@ -24,13 +28,18 @@ IGNORED_PHRASES = [
     r"JSON",
     r"Kerberos",
     r"Mac",
+    r"macOS",
     r"MiB",
+    r"OTP",
     r"Pivotal",
+    r"Play Store",
     r'REMOTE_USER',
+    r'Slack',
     r"SSO",
     r'Terms of Service',
     r"URL",
     r"Ubuntu",
+    r"Updown",
     r"V5",
     r"Webathena",
     r"Windows",
@@ -39,6 +48,8 @@ IGNORED_PHRASES = [
     r"Zephyr",
     r"Zulip",
     r"iPhone",
+    r"iOS",
+    r"Emoji One",
     # Code things
     r".zuliprc",
     r"__\w+\.\w+__",
@@ -56,10 +67,9 @@ IGNORED_PHRASES = [
     # Fragments of larger strings
     (r'Change notification settings for individual streams on your '
      '<a href="/#streams">Streams page</a>.'),
-    (r'<p class="bot-settings-note padded-container"> Looking for our '
+    (r'Looking for our '
      '<a href="/integrations" target="_blank">Integrations</a> or '
-     '<a href="{{ server_uri }}/api" target="_blank">API</a> '
-     'documentation? </p>'),
+     '<a href="/api" target="_blank">API</a> documentation?'),
     r'Most stream administration is done on the <a href="/#streams">Streams page</a>.',
     r"one or more people...",
     r"confirmation email",
@@ -67,6 +77,8 @@ IGNORED_PHRASES = [
     r"^left$",
     r"was too large; the maximum file size is 25MiB.",
     r"^right$",
+    r"selected message",
+    r"a-z",
 
     # SPECIAL CASES
     # Enter is usually capitalized
@@ -77,6 +89,8 @@ IGNORED_PHRASES = [
     r"more conversations",
     # We should probably just delete this string from translations
     r'activation key',
+    # this is used as a topic
+    r'^hello$',
 
     # TO CLEAN UP
     # Just want to avoid churning login.html right now

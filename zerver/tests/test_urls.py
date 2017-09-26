@@ -59,15 +59,14 @@ class PublicURLTest(ZulipTestCase):
             if doc.startswith(".") or '~' in doc or '#' in doc:
                 continue  # nocoverage -- just here for convenience
             if doc not in {'main.html', 'index.md', 'include'}:
-                get_urls[200].append('/help/' + os.path.splitext(doc)[0]) # Strip the extension.
+                get_urls[200].append('/help/' + os.path.splitext(doc)[0])  # Strip the extension.
 
         post_urls = {200: ["/accounts/login/"],
                      302: ["/accounts/logout/"],
                      401: ["/json/messages",
-                           "/json/invite_users",
-                           "/json/settings/change",
+                           "/json/invites",
                            "/json/subscriptions/exists",
-                           "/json/subscriptions/property",
+                           "/api/v1/users/me/subscriptions/properties",
                            "/json/fetch_api_key",
                            "/json/users/me/pointer",
                            "/json/users/me/subscriptions",
@@ -77,12 +76,17 @@ class PublicURLTest(ZulipTestCase):
                            "/api/v1/fetch_api_key",
                            ],
                      }
+        patch_urls = {
+            401: ["/json/settings"],
+        }
         put_urls = {401: ["/json/users/me/pointer"],
                     }
         for status_code, url_set in six.iteritems(get_urls):
             self.fetch("client_get", url_set, status_code)
         for status_code, url_set in six.iteritems(post_urls):
             self.fetch("client_post", url_set, status_code)
+        for status_code, url_set in six.iteritems(patch_urls):
+            self.fetch("client_patch", url_set, status_code)
         for status_code, url_set in six.iteritems(put_urls):
             self.fetch("client_put", url_set, status_code)
 
@@ -93,8 +97,7 @@ class PublicURLTest(ZulipTestCase):
             self.assertEqual(400, resp.status_code,
                              msg="Expected 400, received %d for GET /api/v1/fetch_google_client_id" % (
                                  resp.status_code,))
-            data = ujson.loads(resp.content)
-            self.assertEqual('error', data['result'])
+            self.assertEqual('error', resp.json()['result'])
 
     def test_get_gcid_when_configured(self):
         # type: () -> None
@@ -126,6 +129,8 @@ class URLResolutionTest(TestCase):
             callback_str = self.get_callback_string(pattern)
             if callback_str and hasattr(pattern, "default_args"):
                 for func_string in pattern.default_args.values():
+                    if isinstance(func_string, tuple):
+                        func_string = func_string[0]
                     module_name, view = func_string.rsplit('.', 1)
                     self.check_function_exists(module_name, view)
 

@@ -1,30 +1,22 @@
 from __future__ import absolute_import
-from typing import Optional, Any
-from typing import Dict, Text
+from typing import Optional, Any, Dict, Text
 
 from django.utils.translation import ugettext as _
 from django.conf import settings
 from django.contrib.auth import authenticate, update_session_auth_hash
-from django.core.mail import send_mail
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse
 
 from zerver.decorator import authenticated_json_post_view, has_request_variables, \
-    zulip_login_required, REQ
+    zulip_login_required, REQ, human_users_only
 from zerver.lib.actions import do_change_password, \
-    do_change_enable_desktop_notifications, \
-    do_change_enter_sends, do_change_enable_sounds, \
-    do_change_enable_offline_email_notifications, do_change_enable_digest_emails, \
-    do_change_enable_offline_push_notifications, do_change_enable_online_push_notifications, \
+    do_change_enter_sends, do_change_notification_settings, \
     do_change_default_desktop_notifications, do_change_autoscroll_forever, \
-    do_change_enable_stream_desktop_notifications, do_change_enable_stream_sounds, \
-    do_regenerate_api_key, do_change_avatar_fields, do_change_twenty_four_hour_time, \
-    do_change_left_side_userlist, do_change_emoji_alt_code, do_change_default_language, \
-    do_change_pm_content_in_desktop_notifications, validate_email, \
-    do_change_user_email, do_start_email_change_process, do_change_timezone
+    do_regenerate_api_key, do_change_avatar_fields, do_set_user_display_setting, \
+    validate_email, do_change_user_email, do_start_email_change_process
 from zerver.lib.avatar import avatar_url
+from zerver.lib.send_email import send_email, FromAddress
 from zerver.lib.i18n import get_available_language_codes
 from zerver.lib.response import json_success, json_error
 from zerver.lib.upload import upload_avatar_image
@@ -34,7 +26,8 @@ from zerver.lib.users import check_change_full_name
 from zerver.lib.timezone import get_all_timezones
 from zerver.models import UserProfile, Realm, name_changes_disabled, \
     EmailChangeStatus
-from confirmation.models import EmailChangeConfirmation
+from confirmation.models import get_object_from_key, render_confirmation_key_error, \
+    ConfirmationKeyException
 
 @zulip_login_required
 def confirm_email_change(request, confirmation_key):
@@ -44,37 +37,29 @@ def confirm_email_change(request, confirmation_key):
         raise JsonableError(_("Email address changes are disabled in this organization."))
 
     confirmation_key = confirmation_key.lower()
-    obj = EmailChangeConfirmation.objects.confirm(confirmation_key)
-    confirmed = False
-    new_email = old_email = None  # type: Text
-    if obj:
-        confirmed = True
-        assert isinstance(obj, EmailChangeStatus)
-        new_email = obj.new_email
-        old_email = obj.old_email
+    try:
+        obj = get_object_from_key(confirmation_key)
+    except ConfirmationKeyException as exception:
+        return render_confirmation_key_error(request, exception)
 
-        do_change_user_email(obj.user_profile, obj.new_email)
+    assert isinstance(obj, EmailChangeStatus)
+    new_email = obj.new_email
+    old_email = obj.old_email
 
-        context = {'support_email': settings.ZULIP_ADMINISTRATOR,
-                   'verbose_support_offers': settings.VERBOSE_SUPPORT_OFFERS,
-                   'realm': obj.realm,
-                   'new_email': new_email,
-                   }
-        subject = render_to_string(
-            'confirmation/notify_change_in_email_subject.txt', context)
-        body = render_to_string(
-            'confirmation/notify_change_in_email_body.txt', context)
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [old_email])
+    do_change_user_email(obj.user_profile, obj.new_email)
+
+    context = {'realm': obj.realm, 'new_email': new_email}
+    send_email('zerver/emails/notify_change_in_email', to_email=old_email,
+               from_name="Zulip Account Security", from_address=FromAddress.SUPPORT,
+               context=context)
 
     ctx = {
-        'confirmed': confirmed,
-        'support_email': settings.ZULIP_ADMINISTRATOR,
-        'verbose_support_offers': settings.VERBOSE_SUPPORT_OFFERS,
         'new_email': new_email,
         'old_email': old_email,
     }
     return render(request, 'confirmation/confirm_email_change.html', context=ctx)
 
+@human_users_only
 @has_request_variables
 def json_change_ui_settings(request, user_profile,
                             autoscroll_forever=REQ(validator=check_bool,
@@ -97,7 +82,7 @@ def json_change_ui_settings(request, user_profile,
 
     return json_success(result)
 
-@authenticated_json_post_view
+@human_users_only
 @has_request_variables
 def json_change_settings(request, user_profile,
                          full_name=REQ(default=""),
@@ -117,7 +102,7 @@ def json_change_settings(request, user_profile,
         do_change_password(user_profile, new_password)
         # In Django 1.10, password changes invalidates sessions, see
         # https://docs.djangoproject.com/en/1.10/topics/auth/default/#session-invalidation-on-password-change
-        # for details. To avoid this logging the user out of his own
+        # for details. To avoid this logging the user out of their own
         # session (which would provide a confusing UX at best), we
         # update the session hash here.
         update_session_auth_hash(request, user_profile)
@@ -130,7 +115,7 @@ def json_change_settings(request, user_profile,
         # by Django,
         request.session.save()
 
-    result = {}
+    result = {}  # type: Dict[str, Any]
     new_email = email.strip()
     if user_profile.email != email and new_email != '':
         if user_profile.realm.email_changes_disabled:
@@ -140,8 +125,7 @@ def json_change_settings(request, user_profile,
             return json_error(error or skipped)
 
         do_start_email_change_process(user_profile, new_email)
-        result['account_email'] = _('We have sent you an email on your '
-                                    'new email address for confirmation.')
+        result['account_email'] = _("Check your email for a confirmation link.")
 
     if user_profile.full_name != full_name and full_name.strip() != "":
         if name_changes_disabled(user_profile.realm):
@@ -150,18 +134,21 @@ def json_change_settings(request, user_profile,
             pass
         else:
             # Note that check_change_full_name strips the passed name automatically
-            result['full_name'] = check_change_full_name(user_profile, full_name)
+            result['full_name'] = check_change_full_name(user_profile, full_name, user_profile)
 
     return json_success(result)
 
+@human_users_only
 @has_request_variables
 def update_display_settings_backend(request, user_profile,
                                     twenty_four_hour_time=REQ(validator=check_bool, default=None),
+                                    high_contrast_mode=REQ(validator=check_bool, default=None),
                                     default_language=REQ(validator=check_string, default=None),
                                     left_side_userlist=REQ(validator=check_bool, default=None),
                                     emoji_alt_code=REQ(validator=check_bool, default=None),
+                                    emojiset=REQ(validator=check_string, default=None),
                                     timezone=REQ(validator=check_string, default=None)):
-    # type: (HttpRequest, UserProfile, Optional[bool], Optional[str], Optional[bool], Optional[bool], Optional[Text]) -> HttpResponse
+    # type: (HttpRequest, UserProfile, Optional[bool], Optional[bool], Optional[str], Optional[bool], Optional[bool], Optional[Text], Optional[Text]) -> HttpResponse
     if (default_language is not None and
             default_language not in get_available_language_codes()):
         raise JsonableError(_("Invalid language '%s'" % (default_language,)))
@@ -170,38 +157,26 @@ def update_display_settings_backend(request, user_profile,
             timezone not in get_all_timezones()):
         raise JsonableError(_("Invalid timezone '%s'" % (timezone,)))
 
-    result = {} # type: Dict[str, Any]
-    if (default_language is not None and
-            user_profile.default_language != default_language):
-        do_change_default_language(user_profile, default_language)
-        result['default_language'] = default_language
+    if (emojiset is not None and
+            emojiset not in UserProfile.emojiset_choices()):
+        raise JsonableError(_("Invalid emojiset '%s'" % (emojiset,)))
 
-    elif (twenty_four_hour_time is not None and
-            user_profile.twenty_four_hour_time != twenty_four_hour_time):
-        do_change_twenty_four_hour_time(user_profile, twenty_four_hour_time)
-        result['twenty_four_hour_time'] = twenty_four_hour_time
-
-    elif (left_side_userlist is not None and
-            user_profile.left_side_userlist != left_side_userlist):
-        do_change_left_side_userlist(user_profile, left_side_userlist)
-        result['left_side_userlist'] = left_side_userlist
-
-    elif (emoji_alt_code is not None and
-            user_profile.emoji_alt_code != emoji_alt_code):
-        do_change_emoji_alt_code(user_profile, emoji_alt_code)
-        result['emoji_alt_code'] = emoji_alt_code
-
-    elif (timezone is not None and
-            user_profile.timezone != timezone):
-        do_change_timezone(user_profile, timezone)
-        result['timezone'] = timezone
+    request_settings = {k: v for k, v in list(locals().items()) if k in user_profile.property_types}
+    result = {}  # type: Dict[str, Any]
+    for k, v in list(request_settings.items()):
+        if v is not None and getattr(user_profile, k) != v:
+            do_set_user_display_setting(user_profile, k, v)
+            result[k] = v
 
     return json_success(result)
 
+@human_users_only
 @has_request_variables
 def json_change_notify_settings(request, user_profile,
                                 enable_stream_desktop_notifications=REQ(validator=check_bool,
                                                                         default=None),
+                                enable_stream_push_notifications=REQ(validator=check_bool,
+                                                                     default=None),
                                 enable_stream_sounds=REQ(validator=check_bool,
                                                          default=None),
                                 enable_desktop_notifications=REQ(validator=check_bool,
@@ -218,58 +193,17 @@ def json_change_notify_settings(request, user_profile,
                                                          default=None),
                                 pm_content_in_desktop_notifications=REQ(validator=check_bool,
                                                                         default=None)):
-    # type: (HttpRequest, UserProfile, Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool]) -> HttpResponse
+    # type: (HttpRequest, UserProfile, Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool], Optional[bool]) -> HttpResponse
     result = {}
 
     # Stream notification settings.
 
-    if enable_stream_desktop_notifications is not None and \
-            user_profile.enable_stream_desktop_notifications != enable_stream_desktop_notifications:
-        do_change_enable_stream_desktop_notifications(
-            user_profile, enable_stream_desktop_notifications)
-        result['enable_stream_desktop_notifications'] = enable_stream_desktop_notifications
+    req_vars = {k: v for k, v in list(locals().items()) if k in user_profile.notification_setting_types}
 
-    if enable_stream_sounds is not None and \
-            user_profile.enable_stream_sounds != enable_stream_sounds:
-        do_change_enable_stream_sounds(user_profile, enable_stream_sounds)
-        result['enable_stream_sounds'] = enable_stream_sounds
-
-    # PM and @-mention settings.
-
-    if enable_desktop_notifications is not None and \
-            user_profile.enable_desktop_notifications != enable_desktop_notifications:
-        do_change_enable_desktop_notifications(user_profile, enable_desktop_notifications)
-        result['enable_desktop_notifications'] = enable_desktop_notifications
-
-    if enable_sounds is not None and \
-            user_profile.enable_sounds != enable_sounds:
-        do_change_enable_sounds(user_profile, enable_sounds)
-        result['enable_sounds'] = enable_sounds
-
-    if enable_offline_email_notifications is not None and \
-            user_profile.enable_offline_email_notifications != enable_offline_email_notifications:
-        do_change_enable_offline_email_notifications(user_profile, enable_offline_email_notifications)
-        result['enable_offline_email_notifications'] = enable_offline_email_notifications
-
-    if enable_offline_push_notifications is not None and \
-            user_profile.enable_offline_push_notifications != enable_offline_push_notifications:
-        do_change_enable_offline_push_notifications(user_profile, enable_offline_push_notifications)
-        result['enable_offline_push_notifications'] = enable_offline_push_notifications
-
-    if enable_online_push_notifications is not None and \
-            user_profile.enable_online_push_notifications != enable_online_push_notifications:
-        do_change_enable_online_push_notifications(user_profile, enable_online_push_notifications)
-        result['enable_online_push_notifications'] = enable_online_push_notifications
-
-    if enable_digest_emails is not None and \
-            user_profile.enable_digest_emails != enable_digest_emails:
-        do_change_enable_digest_emails(user_profile, enable_digest_emails)
-        result['enable_digest_emails'] = enable_digest_emails
-
-    if pm_content_in_desktop_notifications is not None and \
-            user_profile.pm_content_in_desktop_notifications != pm_content_in_desktop_notifications:
-        do_change_pm_content_in_desktop_notifications(user_profile, pm_content_in_desktop_notifications)
-        result['pm_content_in_desktop_notifications'] = pm_content_in_desktop_notifications
+    for k, v in list(req_vars.items()):
+        if v is not None and getattr(user_profile, k) != v:
+            do_change_notification_settings(user_profile, k, v)
+            result[k] = v
 
     return json_success(result)
 
@@ -304,7 +238,7 @@ def delete_avatar_backend(request, user_profile):
 @has_request_variables
 def regenerate_api_key(request, user_profile):
     # type: (HttpRequest, UserProfile) -> HttpResponse
-    do_regenerate_api_key(user_profile)
+    do_regenerate_api_key(user_profile, user_profile)
     json_result = dict(
         api_key = user_profile.api_key
     )

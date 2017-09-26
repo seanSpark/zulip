@@ -7,7 +7,7 @@ from django.http import HttpRequest, HttpResponse
 from zerver.lib.actions import check_send_message
 from zerver.lib.response import json_success
 from zerver.lib.request import JsonableError
-from zerver.models import Client, UserProfile
+from zerver.models import UserProfile
 from zerver.decorator import api_key_only_webhook_view, REQ, has_request_variables
 
 from zerver.lib.webhooks.git import get_issue_event_message, SUBJECT_WITH_PR_OR_ISSUE_INFO_TEMPLATE,\
@@ -42,14 +42,16 @@ def get_opened_or_update_pull_request_body(payload):
 def get_assigned_or_unassigned_pull_request_body(payload):
     # type: (Dict[str, Any]) -> Text
     pull_request = payload['pull_request']
-    assignee = pull_request.get('assignee', {}).get('login')
+    assignee = pull_request.get('assignee')
+    if assignee is not None:
+        assignee = assignee.get('login')
 
     base_message = get_pull_request_event_message(
         get_sender_name(payload),
         payload['action'],
         pull_request['html_url'],
     )
-    if assignee:
+    if assignee is not None:
         return "{} to {}".format(base_message, assignee)
     return base_message
 
@@ -180,6 +182,8 @@ def get_push_tags_body(payload):
 def get_push_commits_body(payload):
     # type: (Dict[str, Any]) -> Text
     commits_data = [{
+        'name': (commit.get('author').get('username') or
+                 commit.get('author').get('name')),
         'sha': commit['id'],
         'url': commit['url'],
         'message': commit['message']
@@ -188,7 +192,8 @@ def get_push_commits_body(payload):
         get_sender_name(payload),
         payload['compare'],
         get_branch_name_from_ref(payload['ref']),
-        commits_data
+        commits_data,
+        deleted=payload['deleted']
     )
 
 def get_public_body(payload):
@@ -267,7 +272,7 @@ def get_status_body(payload):
         )
     else:
         status = payload['state']
-    return u"[{}]({}) changed it's status to {}".format(
+    return u"[{}]({}) changed its status to {}".format(
         payload['sha'][:7],  # TODO
         payload['commit']['html_url'],
         status
@@ -304,6 +309,10 @@ def get_ping_body(payload):
 def get_repository_name(payload):
     # type: (Dict[str, Any]) -> Text
     return payload['repository']['name']
+
+def get_organization_name(payload):
+    # type: (Dict[str, Any]) -> Text
+    return payload['organization']['login']
 
 def get_sender_name(payload):
     # type: (Dict[str, Any]) -> Text
@@ -354,6 +363,9 @@ def get_subject_based_on_type(payload, event):
             repo=get_repository_name(payload),
             branch='Wiki Pages'
         )
+    elif event == 'ping':
+        if payload.get('repository') is None:
+            return get_organization_name(payload)
     return get_repository_name(payload)
 
 EVENT_FUNCTION_MAPPER = {
@@ -367,7 +379,7 @@ EVENT_FUNCTION_MAPPER = {
     'fork': get_fork_body,
     'gollum': get_wiki_pages_body,
     'issue_comment': get_issue_comment_body,
-    'issue': get_issue_body,
+    'issues': get_issue_body,
     'member': get_member_body,
     'membership': get_membership_body,
     'opened_or_update_pull_request': get_opened_or_update_pull_request_body,
@@ -388,18 +400,18 @@ EVENT_FUNCTION_MAPPER = {
 @api_key_only_webhook_view('GitHub')
 @has_request_variables
 def api_github_webhook(
-        request, user_profile, client,
-        payload=REQ(argument_type='body'), stream=REQ(default='github')):
-    # type: (HttpRequest, UserProfile, Client, Dict[str, Any], Text) -> HttpResponse
-    event = get_event(request, payload)
+        request, user_profile, payload=REQ(argument_type='body'),
+        stream=REQ(default='github'), branches=REQ(default=None)):
+    # type: (HttpRequest, UserProfile, Dict[str, Any], Text, Text) -> HttpResponse
+    event = get_event(request, payload, branches)
     if event is not None:
         subject = get_subject_based_on_type(payload, event)
         body = get_body_function_based_on_type(event)(payload)
-        check_send_message(user_profile, client, 'stream', [stream], subject, body)
+        check_send_message(user_profile, request.client, 'stream', [stream], subject, body)
     return json_success()
 
-def get_event(request, payload):
-    # type: (HttpRequest, Dict[str, Any]) -> Optional[str]
+def get_event(request, payload, branches):
+    # type: (HttpRequest, Dict[str, Any], Text) -> Optional[str]
     event = request.META['HTTP_X_GITHUB_EVENT']
     if event == 'pull_request':
         action = payload['action']
@@ -409,18 +421,21 @@ def get_event(request, payload):
             return 'assigned_or_unassigned_pull_request'
         if action == 'closed':
             return 'closed_pull_request'
-        if action in ('labeled', 'unlabeled', 'review_requested', 'review_request_removed'):
-            logging.warn('Event pull_request with {} action is unsupported'.format(action))
-            return None
-        raise UnknownEventType(u'Event pull_request with {} action is unsupported'.format(action))
+        logging.warn(u'Event pull_request with {} action is unsupported'.format(action))
+        return None
     if event == 'push':
         if is_commit_push_event(payload):
+            if branches is not None:
+                branch = get_branch_name_from_ref(payload['ref'])
+                if branches.find(branch) == -1:
+                    return None
             return "push_commits"
         else:
             return "push_tags"
     elif event in list(EVENT_FUNCTION_MAPPER.keys()) or event == 'ping':
         return event
-    raise UnknownEventType(u'Event {} is unknown and cannot be handled'.format(event))
+    logging.warn(u'Event {} is unknown and cannot be handled'.format(event))
+    return None
 
 def get_body_function_based_on_type(type):
     # type: (str) -> Any

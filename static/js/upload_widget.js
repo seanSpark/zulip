@@ -39,8 +39,7 @@ var upload_widget = (function () {
 
         function clear() {
             var control = get_file_input();
-            var new_control = control.clone(true);
-            control.replaceWith(new_control);
+            control.val('');
             file_name_field.text('');
             clear_button.hide();
             upload_button.show();
@@ -153,7 +152,7 @@ var upload_widget = (function () {
                     input_error.show();
                     clear();
                 } else {
-                    accept(file);
+                    accept();
                 }
             } else {
                 input_error.text(i18n.t('Please just upload one file.'));

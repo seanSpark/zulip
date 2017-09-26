@@ -10,20 +10,6 @@ var DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 /* Time between keep-alive pings */
 var ACTIVE_PING_INTERVAL_MS = 50 * 1000;
 
-/* Mark users as offline after 140 seconds since their last checkin,
- * Keep in sync with zerver/tornado/event_queue.py:receiver_is_idle
- */
-var OFFLINE_THRESHOLD_SECS = 140;
-
-// Testing
-exports._OFFLINE_THRESHOLD_SECS = OFFLINE_THRESHOLD_SECS;
-
-var MOBILE_DEVICES = ["Android", "ZulipiOS", "ios"];
-
-function is_mobile(device) {
-    return MOBILE_DEVICES.indexOf(device) !== -1;
-}
-
 var presence_descriptions = {
     active: 'is active',
     idle:   'is not active',
@@ -43,51 +29,56 @@ exports.has_focus = document.hasFocus && document.hasFocus();
 // as user activity.
 exports.new_user_input = true;
 
-$("html").on("mousemove", function () {
-    exports.new_user_input = true;
-});
-
-exports.presence_info = {};
-
 var huddle_timestamps = new Dict();
 
-function update_count_in_dom(count_span, value_span, count) {
+function update_pm_count_in_dom(count_span, value_span, count) {
+    var li = count_span.parent();
+
     if (count === 0) {
         count_span.hide();
-        if (count_span.parent().hasClass("user_sidebar_entry")) {
-            count_span.parent(".user_sidebar_entry").removeClass("user-with-count");
-        } else if (count_span.parent().hasClass("group-pms-sidebar-entry")) {
-            count_span.parent(".group-pms-sidebar-entry").removeClass("group-with-count");
-        }
+        li.removeClass("user-with-count");
         value_span.text('');
         return;
     }
 
     count_span.show();
-
-    if (count_span.parent().hasClass("user_sidebar_entry")) {
-        count_span.parent(".user_sidebar_entry").addClass("user-with-count");
-    } else if (count_span.parent().hasClass("group-pms-sidebar-entry")) {
-        count_span.parent(".group-pms-sidebar-entry").addClass("group-with-count");
-    }
+    li.addClass("user-with-count");
     value_span.text(count);
 }
 
-function get_user_list_item(user_id) {
+function update_group_count_in_dom(count_span, value_span, count) {
+    var li = count_span.parent();
+
+    if (count === 0) {
+        count_span.hide();
+        li.removeClass("group-with-count");
+        value_span.text('');
+        return;
+    }
+
+    count_span.show();
+    li.addClass("group-with-count");
+    value_span.text(count);
+}
+
+function get_pm_list_item(user_id) {
     return $("li.user_sidebar_entry[data-user-id='" + user_id + "']");
 }
 
-function get_filter_li(user_ids_string) {
-    if (name.indexOf(",") < 0) {
-        get_user_list_item(user_ids_string);
-    }
+function get_group_list_item(user_ids_string) {
     return $("li.group-pms-sidebar-entry[data-user-ids='" + user_ids_string + "']");
 }
 
-function set_count(user_ids_string, count) {
-    var count_span = get_filter_li(user_ids_string).find('.count');
+function set_pm_count(user_ids_string, count) {
+    var count_span = get_pm_list_item(user_ids_string).find('.count');
     var value_span = count_span.find('.value');
-    update_count_in_dom(count_span, value_span, count);
+    update_pm_count_in_dom(count_span, value_span, count);
+}
+
+function set_group_count(user_ids_string, count) {
+    var count_span = get_group_list_item(user_ids_string).find('.count');
+    var value_span = count_span.find('.value');
+    update_group_count_in_dom(count_span, value_span, count);
 }
 
 exports.update_dom_with_unread_counts = function (counts) {
@@ -96,7 +87,12 @@ exports.update_dom_with_unread_counts = function (counts) {
 
     counts.pm_count.each(function (count, user_ids_string) {
         // TODO: just use user_ids_string in our markup
-        set_count(user_ids_string, count);
+        var is_pm = user_ids_string.indexOf(',') < 0;
+        if (is_pm) {
+            set_pm_count(user_ids_string, count);
+        } else {
+            set_group_count(user_ids_string, count);
+        }
     });
 };
 
@@ -165,16 +161,12 @@ exports.short_huddle_name = function (huddle) {
 };
 
 exports.huddle_fraction_present = function (huddle) {
-    var presence_info = exports.presence_info;
     var user_ids = huddle.split(',');
 
     var num_present = 0;
     _.each(user_ids, function (user_id) {
-        if (presence_info[user_id]) {
-            var status = presence_info[user_id].status;
-            if (status && (status !== 'offline')) {
-                num_present += 1;
-            }
+        if (presence.is_not_offline(user_id)) {
+            num_present += 1;
         }
     });
 
@@ -184,7 +176,6 @@ exports.huddle_fraction_present = function (huddle) {
 };
 
 function compare_function(a, b) {
-    var presence_info = exports.presence_info;
 
     function level(status) {
         switch (status) {
@@ -197,8 +188,8 @@ function compare_function(a, b) {
         }
     }
 
-    var level_a = level(presence_info[a].status);
-    var level_b = level(presence_info[b].status);
+    var level_a = level(presence.get_status(a));
+    var level_b = level(presence.get_status(b));
     var diff = level_a - level_b;
     if (diff !== 0) {
         return diff;
@@ -264,8 +255,7 @@ function matches_filter(user_id) {
     return (filter_user_ids([user_id]).length === 1);
 }
 
-function filter_and_sort(users) {
-    var user_ids = Object.keys(users);
+function filter_and_sort(user_ids) {
     user_ids = filter_user_ids(user_ids);
     user_ids = sort_users(user_ids);
     return user_ids;
@@ -281,16 +271,16 @@ function get_num_unread(user_id) {
 }
 
 function info_for(user_id) {
-    var presence = exports.presence_info[user_id].status;
+    var status = presence.get_status(user_id);
     var person = people.get_person_from_user_id(user_id);
     return {
         href: narrow.pm_with_uri(person.email),
         name: person.full_name,
         user_id: user_id,
         num_unread: get_num_unread(user_id),
-        type: presence,
-        type_desc: presence_descriptions[presence],
-        mobile: exports.presence_info[user_id].mobile,
+        type: status,
+        type_desc: presence_descriptions[status],
+        mobile: presence.get_mobile(user_id),
     };
 }
 
@@ -326,7 +316,7 @@ exports.insert_user_into_list = function (user_id) {
 
     insert();
 
-    var elt = get_user_list_item(user_id);
+    var elt = get_pm_list_item(user_id);
     compose_fade.update_one_user_row(elt);
 };
 
@@ -335,10 +325,9 @@ exports.build_user_sidebar = function () {
         return;
     }
 
-    var users = exports.presence_info;
-    users = filter_and_sort(users);
+    var user_ids = filter_and_sort(presence.get_user_ids());
 
-    var user_info = _.map(users, info_for);
+    var user_info = _.map(user_ids, info_for);
     var html = templates.render('user_presence_rows', {users: user_info});
     $('#user_presences').html(html);
 
@@ -392,74 +381,46 @@ exports.update_huddles = function () {
 
     _.each(huddles, function (user_ids_string) {
         var count = unread.num_unread_for_person(user_ids_string);
-        set_count(user_ids_string, count);
+        set_group_count(user_ids_string, count);
     });
 
     show_huddles();
 };
 
-function status_from_timestamp(baseline_time, presence) {
-    var status = 'offline';
-    var mobileAvailable = false;
-    var nonmobileAvailable = false;
-    _.each(presence, function (device_presence, device) {
-        var age = baseline_time - device_presence.timestamp;
-        if (is_mobile(device)) {
-            mobileAvailable = device_presence.pushable || mobileAvailable;
-        }
-        if (age < OFFLINE_THRESHOLD_SECS) {
-            switch (device_presence.status) {
-                case 'active':
-                    if (is_mobile(device)) {
-                        mobileAvailable = true;
-                    } else {
-                        nonmobileAvailable = true;
-                    }
-                    status = device_presence.status;
-                    break;
-                case 'idle':
-                    if (status !== 'active') {
-                        status = device_presence.status;
-                    }
-                    break;
-                case 'offline':
-                    if (status !== 'active' && status !== 'idle') {
-                        status = device_presence.status;
-                    }
-                    break;
-                default:
-                    blueslip.error('Unexpected status', {presence_object: device_presence, device: device}, undefined);
-            }
-        }
-    });
-    return {status: status, mobile: !nonmobileAvailable && mobileAvailable };
-}
-
-// For testing
-exports._status_from_timestamp = status_from_timestamp;
 
 function focus_ping(want_redraw) {
     channel.post({
         url: '/json/users/me/presence',
         data: {status: (exports.has_focus) ? exports.ACTIVE : exports.IDLE,
+               ping_only: !want_redraw,
                new_user_input: exports.new_user_input},
         idempotent: true,
         success: function (data) {
 
             // Update Zephyr mirror activity warning
             if (data.zephyr_mirror_active === false) {
-                $('#zephyr-mirror-error').show();
+                $('#zephyr-mirror-error').addClass("show");
             } else {
-                $('#zephyr-mirror-error').hide();
+                $('#zephyr-mirror-error').removeClass("show");
             }
 
             exports.new_user_input = false;
 
-            // TODO: If want_redraw is false, we should have the server
-            // not send us any presences data.  But avoiding the redraw
-            // helps.
+            // Zulip has 2 data feeds coming from the server to the
+            // client: The server_events data, and this presence feed.
+            // Everything in server_events is nicely serialized, but
+            // if we've been offline and not running for a while
+            // (e.g. due to suspend), we can end up throwing
+            // exceptions due to users appearing in presence that we
+            // haven't learned about yet.  We handle this in 2 stages.
+            // First, here, we make sure that we've confirmed whether
+            // we are indeed in the unsuspend case.  Then, in
+            // `presence.set_info`, we only complain about unknown
+            // users if server_events does not suspect we're offline.
+            server_events.check_for_unsuspend();
+
             if (want_redraw) {
-                exports.set_presence_info(data.presences, data.server_timestamp);
+                presence.set_info(data.presences, data.server_timestamp);
                 exports.build_user_sidebar();
                 exports.update_huddles();
             }
@@ -475,14 +436,20 @@ function focus_gained() {
 }
 
 exports.initialize = function () {
+    $("html").on("mousemove", function () {
+        exports.new_user_input = true;
+    });
+
     $(window).focus(focus_gained);
     $(window).idle({idle: DEFAULT_IDLE_TIMEOUT_MS,
                 onIdle: focus_lost,
                 onActive: focus_gained,
                 keepTracking: true});
 
-    activity.set_presence_info(page_params.initial_presences,
-                               page_params.initial_servertime);
+    presence.set_info(page_params.presences,
+                      page_params.initial_servertime);
+    delete page_params.presences;
+
     exports.build_user_sidebar();
     exports.update_huddles();
 
@@ -497,34 +464,20 @@ exports.initialize = function () {
     setInterval(get_full_presence_list_update, ACTIVE_PING_INTERVAL_MS);
 };
 
-exports.set_user_status = function (email, presence, server_time) {
+exports.set_user_status = function (email, info, server_time) {
     if (people.is_current_user(email)) {
         return;
     }
+
     var user_id = people.get_user_id(email);
-    if (user_id) {
-        var status = status_from_timestamp(server_time, presence);
-        exports.presence_info[user_id] = status;
-        exports.insert_user_into_list(user_id);
-    } else {
+    if (!user_id) {
         blueslip.warn('unknown email: ' + email);
+        return;
     }
 
+    presence.set_user_status(user_id, info, server_time);
+    exports.insert_user_into_list(user_id);
     exports.update_huddles();
-};
-
-exports.set_presence_info = function (presences, server_timestamp) {
-    exports.presence_info = {};
-    _.each(presences, function (presence, this_email) {
-        if (!people.is_current_user(this_email)) {
-            var user_id = people.get_user_id(this_email);
-            if (user_id) {
-                var status = status_from_timestamp(server_timestamp,
-                                                   presence);
-                exports.presence_info[user_id] = status;
-            }
-        }
-    });
 };
 
 exports.redraw = function () {
@@ -541,7 +494,7 @@ function update_clear_search_button() {
 
     // Show button iff the search input is focused, or has non-empty contents
     if (focused || $('.user-list-filter').val()) {
-        $('#clear_search_people_button').removeAttr('disabled');
+        $('#clear_search_people_button').prop('disabled', false);
     } else {
         $('#clear_search_people_button').attr('disabled', 'disabled');
     }
@@ -581,6 +534,7 @@ function maybe_select_person(e) {
 
         // Prevent a newline from being entered into the soon-to-be-opened composebox
         e.preventDefault();
+        e.stopPropagation();
 
         var topPerson = $('#user_presences li.user_sidebar_entry').first().attr('data-user-id');
         var user_list = $(".user-list-filter");
@@ -589,8 +543,9 @@ function maybe_select_person(e) {
             // undefined if there are no results
             var email = people.get_person_from_user_id(topPerson).email;
             narrow.by('pm-with', email, {select_first_unread: true, trigger: 'user sidebar'});
-            compose.start('private',
-                    {trigger: 'sidebar enter key', private_message_recipient: email});
+            compose_actions.start('private', {
+                trigger: 'sidebar enter key',
+                private_message_recipient: email});
         }
         // Clear the user filter
         exports.escape_search();

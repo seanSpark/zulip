@@ -41,17 +41,17 @@ import six
 def der_encode_length(length):
     # type: (int) -> bytes
     if length <= 127:
-        return force_bytes(chr(length))
+        return struct.pack('!B', length)
     out = b""
     while length > 0:
-        out = force_bytes(chr(length & 0xff)) + out
+        out = struct.pack('!B', length & 0xff) + out
         length >>= 8
-    out = force_bytes(chr(len(out) | 0x80)) + out
+    out = struct.pack('!B', len(out) | 0x80) + out
     return out
 
 def der_encode_tlv(tag, value):
     # type: (int, bytes) -> bytes
-    return force_bytes(chr(tag)) + der_encode_length(len(value)) + value
+    return struct.pack('!B', tag) + der_encode_length(len(value)) + value
 
 def der_encode_integer_value(val):
     # type: (int) -> bytes
@@ -66,12 +66,12 @@ def der_encode_integer_value(val):
     # Special-case to avoid an empty encoding.
     if val == 0:
         return b"\x00"
-    sign = 0 # What you would get if you sign-extended the current high bit.
+    sign = 0  # What you would get if you sign-extended the current high bit.
     out = b""
     # We can stop once sign-extension matches the remaining value.
     while val != sign:
         byte = val & 0xff
-        out = force_bytes(chr(byte)) + out
+        out = struct.pack('!B', byte) + out
         sign = -1 if byte & 0x80 == 0x80 else 0
         val >>= 8
     return out
@@ -103,11 +103,11 @@ def der_encode_octet_string(val):
     return der_encode_tlv(0x04, val)
 
 def der_encode_sequence(tlvs, tagged=True):
-    # type: (List[bytes], Optional[bool]) -> bytes
+    # type: (List[Optional[bytes]], Optional[bool]) -> bytes
     body = []
     for i, tlv in enumerate(tlvs):
         # Missing optional elements represented as None.
-        if not tlv:
+        if tlv is None:
             continue
         if tagged:
             # Assume kerberos-style explicit tagging of components.
@@ -118,16 +118,16 @@ def der_encode_sequence(tlvs, tagged=True):
 def der_encode_ticket(tkt):
     # type: (Dict[str, Any]) -> bytes
     return der_encode_tlv(
-        0x61, # Ticket
+        0x61,  # Ticket
         der_encode_sequence(
-            [der_encode_integer(5), # tktVno
+            [der_encode_integer(5),  # tktVno
              der_encode_string(tkt["realm"]),
-             der_encode_sequence( # PrincipalName
+             der_encode_sequence(  # PrincipalName
                  [der_encode_int32(tkt["sname"]["nameType"]),
                   der_encode_sequence([der_encode_string(c)
                                        for c in tkt["sname"]["nameString"]],
                                       tagged=False)]),
-             der_encode_sequence( # EncryptedData
+             der_encode_sequence(  # EncryptedData
                  [der_encode_int32(tkt["encPart"]["etype"]),
                   (der_encode_uint32(tkt["encPart"]["kvno"])
                    if "kvno" in tkt["encPart"]
@@ -188,11 +188,11 @@ def make_ccache(cred):
     # Do we need a DeltaTime header? The ccache I get just puts zero
     # in there, so do the same.
     out = struct.pack("!HHHHII",
-                      0x0504, # file_format_version
-                      12, # headerlen
-                      1, # tag (DeltaTime)
-                      8, # taglen (two uint32_ts)
-                      0, 0, # time_offset / usec_offset
+                      0x0504,  # file_format_version
+                      12,  # headerlen
+                      1,  # tag (DeltaTime)
+                      8,  # taglen (two uint32_ts)
+                      0, 0,  # time_offset / usec_offset
                       )
     out += ccache_principal(cred["cname"], cred["crealm"])
     out += ccache_credential(cred)

@@ -2,11 +2,12 @@
 
 {!admin-only.md!}
 
-In Zulip, most of the stream administration is done on the subscription page.
-However, Zulip organization administrators must use their administration panels
+In Zulip, most stream administration is done on the subscription page.
+However, Zulip organization administrators must use the Zulip
+**[organization administration interface](/help/change-your-organization-settings)**
 to delete streams.
 
-{!go-to-the.md!} [Delete streams](/#administration/streams-list-admin)
+{!go-to-the.md!} [Delete streams](/#organization/streams-list-admin)
 {!admin.md!}
 
 2. Find the stream you want to delete, and click the **Delete stream** button to

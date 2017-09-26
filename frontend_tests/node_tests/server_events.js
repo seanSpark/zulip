@@ -3,6 +3,7 @@ var assert = require('assert');
 add_dependencies({
     util: 'js/util.js',
     tutorial: 'js/tutorial.js',
+    server_events_dispatch: 'js/server_events_dispatch.js',
 });
 
 var noop = function () {};
@@ -25,20 +26,64 @@ set_global('reload', {
     is_in_progress: function () {return false;},
 });
 
+// we also directly write to pointer
+set_global('pointer', {});
+
 set_global('echo', {
     process_from_server: function (messages) {
         return messages;
     },
     set_realm_filters: noop,
 });
+set_global('ui_report', {
+    hide_error: function () { return false; },
+    show_error: function () { return false; },
+});
 
 var server_events = require('js/server_events.js');
+
+server_events.home_view_loaded();
+
+(function test_message_event() {
+    var event = {
+        type: 'message',
+        message: {
+            content: 'hello',
+        },
+        flags: [],
+    };
+
+    var inserted;
+    set_global('message_events', {
+        insert_new_messages: function (messages) {
+            assert.equal(messages[0].content, event.message.content);
+            inserted = true;
+        },
+    });
+
+    server_events._get_events_success([event]);
+    assert(inserted);
+}());
+
+(function test_pointer_event() {
+    var event = {
+        type: 'pointer',
+        pointer: 999,
+    };
+
+    global.pointer.furthest_read = 0;
+    global.pointer.server_furthest_read = 0;
+    server_events._get_events_success([event]);
+    assert.equal(global.pointer.furthest_read, event.pointer);
+    assert.equal(global.pointer.server_furthest_read, event.pointer);
+}());
+
 
 // Start blueslip tests here
 
 var setup = function (results) {
     server_events.home_view_loaded();
-    set_global('message_store', {
+    set_global('message_events', {
         insert_new_messages: function () {
             throw Error('insert error');
         },
@@ -46,8 +91,8 @@ var setup = function (results) {
             throw Error('update error');
         },
     });
-    set_global('subs', {
-        update_subscription_properties: function () {
+    set_global('stream_events', {
+        update_property: function () {
             throw Error('subs update error');
         },
     });

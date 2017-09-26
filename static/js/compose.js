@@ -1,7 +1,6 @@
 var compose = (function () {
 
 var exports = {};
-var is_composing_message = false;
 
 /* Track the state of the @all warning. The user must acknowledge that they are spamming the entire
    stream before the warning will go away. If they try to send before explicitly dismissing the
@@ -18,7 +17,7 @@ exports.all_everyone_warn_threshold = 15;
 var uploads_domain = document.location.protocol + '//' + document.location.host;
 var uploads_path = '/user_uploads';
 var uploads_re = new RegExp("\\]\\(" + uploads_domain + "(" + uploads_path + "[^\\)]+)\\)", 'g');
-
+var clone_file_input;
 function make_upload_absolute(uri) {
     if (uri.indexOf(uploads_path) === 0) {
         // Rewrite the URI to a usable link
@@ -35,60 +34,16 @@ function make_uploads_relative(content) {
 // This function resets an input type="file".  Pass in the
 // jquery object.
 function clear_out_file_list(jq_file_list) {
-    var clone_for_ie_sake = jq_file_list.clone(true);
-    jq_file_list.replaceWith(clone_for_ie_sake);
-
+    if (clone_file_input !== undefined) {
+        jq_file_list.replaceWith(clone_file_input.clone(true));
+    }
     // Hack explanation:
     // IE won't let you do this (untested, but so says StackOverflow):
     //    $("#file_input").val("");
 }
 
-exports.autosize_textarea = function () {
-    $("#new_message_content").trigger("autosize.resize");
-};
-
-// Show the compose box.
-function show_box(tabname, focus_area, opts) {
-    if (tabname === "stream") {
-        $('#private-message').hide();
-        $('#stream-message').show();
-        $("#stream_toggle").addClass("active");
-        $("#private_message_toggle").removeClass("active");
-    } else {
-        $('#private-message').show();
-        $('#stream-message').hide();
-        $("#stream_toggle").removeClass("active");
-        $("#private_message_toggle").addClass("active");
-    }
-    $("#send-status").removeClass(status_classes).hide();
-    $('#compose').css({visibility: "visible"});
-    $(".new_message_textarea").css("min-height", "3em");
-
-    if (focus_area !== undefined &&
-        (window.getSelection().toString() === "" ||
-         opts.trigger !== "message click")) {
-        focus_area.focus().select();
-    }
-
-    // If the compose box is obscuring the currently selected message,
-    // scroll up until the message is no longer occluded.
-    if (current_msg_list.selected_id() === -1) {
-        // If there's no selected message, there's no need to
-        // scroll the compose box to avoid it.
-        return;
-    }
-    var selected_row = current_msg_list.selected_row();
-    var cover = selected_row.offset().top + selected_row.height()
-        - $("#compose").offset().top;
-    if (cover > 0) {
-        message_viewport.user_initiated_animate_scroll(cover+5);
-    }
-
-}
-
 function show_all_everyone_warnings() {
-    var current_stream = stream_data.get_sub(compose.stream_name());
-    var stream_count = current_stream.subscribers.num_items();
+    var stream_count = stream_data.get_subscriber_count(compose_state.stream_name()) || 0;
 
     var all_everyone_template = templates.render("compose_all_everyone", {count: stream_count});
     var error_area_all_everyone = $("#compose-all-everyone");
@@ -102,216 +57,46 @@ function show_all_everyone_warnings() {
     user_acknowledged_all_everyone = false;
 }
 
-function clear_all_everyone_warnings() {
+exports.clear_all_everyone_warnings = function () {
     $("#compose-all-everyone").hide();
     $("#compose-all-everyone").empty();
     $("#send-status").hide();
-}
+};
 
-function clear_invites() {
+exports.clear_invites = function () {
     $("#compose_invite_users").hide();
     $("#compose_invite_users").empty();
-}
+};
 
-function clear_box() {
-    clear_invites();
-    clear_all_everyone_warnings();
+exports.reset_user_acknowledged_all_everyone_flag = function () {
     user_acknowledged_all_everyone = undefined;
-    $("#compose").find('input[type=text], textarea').val('');
-    $("#new_message_content").removeData("draft-id");
-    exports.autosize_textarea();
-    $("#send-status").hide(0);
-}
+};
 
-function clear_preview_area() {
+exports.clear_preview_area = function () {
     $("#new_message_content").show();
     $("#undo_markdown_preview").hide();
     $("#preview_message_area").hide();
     $("#preview_content").empty();
     $("#markdown_preview").show();
-}
-
-function hide_box() {
-    $('.message_comp').find('input, textarea, button').blur();
-    $('#stream-message').hide();
-    $('#private-message').hide();
-    $(".new_message_textarea").css("min-height", "");
-    compose_fade.clear_compose();
-    $('.message_comp').hide();
-    $("#compose_controls").show();
-    clear_preview_area();
-}
-
-function update_lock_icon_for_stream(stream_name) {
-    var icon = $("#compose-lock-icon");
-    var streamfield = $("#stream");
-    if (stream_data.get_invite_only(stream_name)) {
-        icon.show();
-        streamfield.addClass("lock-padding");
-    } else {
-        icon.hide();
-        streamfield.removeClass("lock-padding");
-    }
-}
-
-// In an attempt to decrease mixing, make the composebox's
-// stream bar look like what you're replying to.
-// (In particular, if there's a color associated with it,
-//  have that color be reflected here too.)
-exports.decorate_stream_bar = function (stream_name) {
-    var color = stream_data.get_color(stream_name);
-    update_lock_icon_for_stream(stream_name);
-    $("#stream-message .message_header_stream")
-        .css('background-color', color)
-        .removeClass(stream_color.color_classes)
-        .addClass(stream_color.get_color_class(color));
 };
 
 function update_fade() {
-    if (!is_composing_message) {
+    if (!compose_state.composing()) {
         return;
     }
 
-    // Legacy strangeness: is_composing_message can be false, "stream", or "private"
-    var msg_type = is_composing_message;
+    var msg_type = compose_state.get_message_type();
     compose_fade.set_focused_recipient(msg_type);
     compose_fade.update_faded_messages();
 }
 
-$(function () {
-    $('#stream,#subject,#private_message_recipient').bind({
-         keyup: update_fade,
-         change: update_fade,
-    });
-});
-
-function fill_in_opts_from_current_narrowed_view(msg_type, opts) {
-    var default_opts = {
-        message_type:     msg_type,
-        stream:           '',
-        subject:          '',
-        private_message_recipient: '',
-        trigger:          'unknown',
-    };
-
-    // Set default parameters based on the current narrowed view.
-    narrow.set_compose_defaults(default_opts);
-    opts = _.extend(default_opts, opts);
-    return opts;
-}
-
-function same_recipient_as_before(msg_type, opts) {
-    return (compose.composing() === msg_type) &&
-            ((msg_type === "stream" &&
-              opts.stream === compose.stream_name() &&
-              opts.subject === compose.subject()) ||
-             (msg_type === "private" &&
-              opts.private_message_recipient === compose.recipient()));
-}
-
-function show_box_for_msg_type(msg_type, opts) {
-    var focus_area;
-
-    if (msg_type === 'stream' && opts.stream && ! opts.subject) {
-        focus_area = 'subject';
-    } else if ((msg_type === 'stream' && opts.stream)
-               || (msg_type === 'private' && opts.private_message_recipient)) {
-        focus_area = 'new_message_content';
-    }
-
-    if (msg_type === 'stream') {
-        show_box('stream', $("#" + (focus_area || 'stream')), opts);
-    } else {
-        show_box('private', $("#" + (focus_area || 'private_message_recipient')), opts);
-    }
-}
-
-exports.start = function (msg_type, opts) {
-    $("#new_message_content").autosize();
-
-    if (reload.is_in_progress()) {
-        return;
-    }
-    notifications.clear_compose_notifications();
-    $("#compose_close").show();
-    $("#compose_controls").hide();
-    $('.message_comp').show();
-
-    opts = fill_in_opts_from_current_narrowed_view(msg_type, opts);
-    // If we are invoked by a compose hotkey (c or C), do not assume that we know
-    // what the message's topic or PM recipient should be.
-    if (opts.trigger === "compose_hotkey") {
-        opts.subject = '';
-        opts.private_message_recipient = '';
-    }
-
-    if (compose.composing() && !same_recipient_as_before(msg_type, opts)) {
-        // Clear the compose box if the existing message is to a different recipient
-        clear_box();
-    }
-
-    compose.stream_name(opts.stream);
-    compose.subject(opts.subject);
-
-    // Set the recipients with a space after each comma, so it looks nice.
-    compose.recipient(opts.private_message_recipient.replace(/,\s*/g, ", "));
-
-    // If the user opens the compose box, types some text, and then clicks on a
-    // different stream/subject, we want to keep the text in the compose box
-    if (opts.content !== undefined) {
-        compose.message_content(opts.content);
-    }
-
-    ui.change_tab_to("#home");
-
-    is_composing_message = msg_type;
-
-    // Set focus to "Topic" when narrowed to a stream+topic and "New topic" button clicked.
-    if (opts.trigger === "new topic button") {
-        show_box('stream', $("#subject"), opts);
-    } else {
-        // Show either stream/topic fields or "You and" field.
-        show_box_for_msg_type(msg_type, opts);
-    }
-
-    compose_fade.start_compose(msg_type);
-
-    exports.decorate_stream_bar(opts.stream);
-    $(document).trigger($.Event('compose_started.zulip', opts));
-    resize.resize_bottom_whitespace();
-};
-
-function abort_xhr() {
-    $("#compose-send-button").removeAttr("disabled");
+exports.abort_xhr = function () {
+    $("#compose-send-button").prop("disabled", false);
     var xhr = $("#compose").data("filedrop_xhr");
     if (xhr !== undefined) {
         xhr.abort();
         $("#compose").removeData("filedrop_xhr");
     }
-}
-
-exports.cancel = function () {
-    $("#new_message_content").height(40 + "px");
-
-    if (page_params.narrow !== undefined) {
-        // Never close the compose box in narrow embedded windows, but
-        // at least clear the subject and unfade.
-        compose_fade.clear_compose();
-        if (page_params.narrow_topic !== undefined) {
-            compose.subject(page_params.narrow_topic);
-        } else {
-            compose.subject("");
-        }
-        return;
-    }
-    hide_box();
-    $("#compose_close").hide();
-    resize.resize_bottom_whitespace();
-    clear_box();
-    notifications.clear_compose_notifications();
-    abort_xhr();
-    is_composing_message = false;
-    $(document).trigger($.Event('compose_canceled.zulip'));
 };
 
 exports.empty_topic_placeholder = function () {
@@ -320,33 +105,33 @@ exports.empty_topic_placeholder = function () {
 
 function create_message_object() {
     // Subjects are optional, and we provide a placeholder if one isn't given.
-    var subject = compose.subject();
+    var subject = compose_state.subject();
     if (subject === "") {
         subject = compose.empty_topic_placeholder();
     }
 
-    var content = make_uploads_relative(compose.message_content());
+    var content = make_uploads_relative(compose_state.message_content());
 
     // Changes here must also be kept in sync with echo.try_deliver_locally
     var message = {
-        type: compose.composing(),
+        type: compose_state.get_message_type(),
         content: content,
         sender_id: page_params.user_id,
-        queue_id: page_params.event_queue_id,
+        queue_id: page_params.queue_id,
         stream: '',
         subject: '',
     };
 
     if (message.type === "private") {
         // TODO: this should be collapsed with the code in composebox_typeahead.js
-        var recipient = compose.recipient();
+        var recipient = compose_state.recipient();
         var emails = util.extract_pm_recipients(recipient);
         message.to = emails;
         message.reply_to = recipient;
         message.private_message_recipient = recipient;
         message.to_user_ids = people.email_list_to_user_ids_string(emails);
     } else {
-        var stream_name = compose.stream_name();
+        var stream_name = compose_state.stream_name();
         message.to = stream_name;
         message.stream = stream_name;
         var sub = stream_data.get_sub(stream_name);
@@ -357,24 +142,15 @@ function create_message_object() {
     }
     return message;
 }
-
-exports.snapshot_message = function () {
-    if (!exports.composing() || (exports.message_content() === "")) {
-        // If you aren't in the middle of composing the body of a
-        // message, don't try to snapshot.
-        return;
-    }
-
-    // Save what we can.
-    return create_message_object();
-};
+// Export for testing
+exports.create_message_object = create_message_object;
 
 function compose_error(error_text, bad_input) {
-    $('#send-status').removeClass(status_classes)
+    $('#send-status').removeClass(common.status_classes)
                .addClass('alert-error')
                .stop(true).fadeTo(0, 1);
     $('#error-msg').html(error_text);
-    $("#compose-send-button").removeAttr('disabled');
+    $("#compose-send-button").prop('disabled', false);
     $("#sending-indicator").hide();
     if (bad_input !== undefined) {
         bad_input.focus().select();
@@ -403,20 +179,6 @@ function send_message_ajax(request, success, error) {
     });
 }
 
-function report_send_time(send_time, receive_time, display_time, locally_echoed, rendered_changed) {
-    var data = {time: send_time.toString(),
-                received: receive_time.toString(),
-                displayed: display_time.toString(),
-                locally_echoed: locally_echoed};
-    if (locally_echoed) {
-        data.rendered_content_disparity = rendered_changed;
-    }
-    channel.post({
-        url: '/json/report_send_time',
-        data: data,
-    });
-}
-
 var socket;
 if (page_params.use_websockets) {
     socket = new Socket("/sockjs");
@@ -435,103 +197,35 @@ function send_message_socket(request, success, error) {
     });
 }
 
-exports.send_times_log = [];
-exports.send_times_data = {};
-function maybe_report_send_times(message_id) {
-    var data = exports.send_times_data[message_id];
-    if (data.send_finished === undefined || data.received === undefined ||
-        data.displayed === undefined) {
-        // We report the data once we have both the send and receive times
-        return;
-    }
-    report_send_time(data.send_finished - data.start,
-                     data.received - data.start,
-                     data.displayed - data.start,
-                     data.locally_echoed,
-                     data.rendered_content_disparity || false);
-}
-
-function mark_end_to_end_receive_time(message_id) {
-    if (exports.send_times_data[message_id] === undefined) {
-        exports.send_times_data[message_id] = {};
-    }
-    exports.send_times_data[message_id].received = new Date();
-    maybe_report_send_times(message_id);
-}
-
-function mark_end_to_end_display_time(message_id) {
-    if (exports.send_times_data[message_id] === undefined) {
-        exports.send_times_data[message_id] = {};
-    }
-    exports.send_times_data[message_id].displayed = new Date();
-    maybe_report_send_times(message_id);
-}
-
-exports.mark_rendered_content_disparity = function (message_id, changed) {
-    if (exports.send_times_data[message_id] === undefined) {
-        exports.send_times_data[message_id] = {};
-    }
-    exports.send_times_data[message_id].rendered_content_disparity = changed;
-};
-
-exports.report_as_received = function report_as_received(message) {
-    if (message.sent_by_me) {
-        mark_end_to_end_receive_time(message.id);
-        setTimeout(function () {
-            mark_end_to_end_display_time(message.id);
-        }, 0);
-    }
-};
-
-function process_send_time(message_id, start_time, locally_echoed) {
-    var send_finished = new Date();
-    var send_time = (send_finished - start_time);
-    if (feature_flags.log_send_times) {
-        blueslip.log("send time: " + send_time);
-    }
-    if (feature_flags.collect_send_times) {
-        exports.send_times_log.push(send_time);
-    }
-    if (exports.send_times_data[message_id] === undefined) {
-        exports.send_times_data[message_id] = {};
-    }
-    exports.send_times_data[message_id].start = start_time;
-    exports.send_times_data[message_id].send_finished = send_finished;
-    exports.send_times_data[message_id].locally_echoed  = locally_echoed;
-    maybe_report_send_times(message_id);
-}
-
 function clear_compose_box() {
     $("#new_message_content").val('').focus();
     drafts.delete_draft_after_send();
-    exports.autosize_textarea();
+    compose_ui.autosize_textarea();
     $("#send-status").hide(0);
-    $("#compose-send-button").removeAttr('disabled');
+    $("#compose-send-button").prop('disabled', false);
     $("#sending-indicator").hide();
     resize.resize_bottom_whitespace();
 }
 
-exports.send_message_success = function (local_id, message_id, start_time, locally_echoed) {
-    if (! feature_flags.local_echo || !locally_echoed) {
+exports.send_message_success = function (local_id, message_id, locally_echoed) {
+    if (!locally_echoed) {
         clear_compose_box();
     }
 
-    process_send_time(message_id, start_time, locally_echoed);
-
-    if (feature_flags.local_echo) {
-        echo.reify_message_id(local_id, message_id);
-    }
-
-    setTimeout(function () {
-        if (exports.send_times_data[message_id].received === undefined) {
-            blueslip.log("Restarting get_events due to delayed receipt of sent message " + message_id);
-            server_events.restart_get_events();
-        }
-    }, 5000);
+    echo.reify_message_id(local_id, message_id);
 };
 
-exports.transmit_message = function (request, success, error) {
-    delete exports.send_times_data[request.id];
+exports.transmit_message = function (request, on_success, error) {
+
+    function success(data) {
+        // Call back to our callers to do things like closing the compose
+        // box and turning off spinners and reifying locally echoed messages.
+        on_success(data);
+
+        // Once everything is done, get ready to report times to the server.
+        sent_messages.report_server_ack(request.local_id);
+    }
+
     if (page_params.use_websockets) {
         send_message_socket(request, success, error);
     } else {
@@ -539,7 +233,7 @@ exports.transmit_message = function (request, success, error) {
     }
 };
 
-function send_message(request) {
+exports.send_message = function send_message(request) {
     if (request === undefined) {
         request = create_message_object();
     }
@@ -550,25 +244,41 @@ function send_message(request) {
         request.to = JSON.stringify([request.to]);
     }
 
-    var start_time = new Date();
     var local_id;
-    if (feature_flags.local_echo) {
-        local_id = echo.try_deliver_locally(request);
-        if (local_id !== undefined) {
-            // We delivered this message locally
-            request.local_id = local_id;
-        }
+    var locally_echoed;
+
+    local_id = echo.try_deliver_locally(request);
+    if (local_id) {
+        // We are rendering this message locally with an id
+        // like 92l99.01 that corresponds to a reasonable
+        // approximation of the id we'll get from the server
+        // in terms of sorting messages.
+        locally_echoed = true;
+    } else {
+        // We are not rendering this message locally, but we
+        // track the message's life cycle with an id like
+        // loc-1, loc-2, loc-3,etc.
+        locally_echoed = false;
+        local_id = sent_messages.get_new_local_id();
     }
-    var locally_echoed = local_id !== undefined;
+
+    request.local_id = local_id;
+
+    sent_messages.start_tracking_message({
+        local_id: local_id,
+        locally_echoed: locally_echoed,
+    });
+
+    request.locally_echoed = locally_echoed;
 
     function success(data) {
-        exports.send_message_success(local_id, data.id, start_time, locally_echoed);
+        exports.send_message_success(local_id, data.id, locally_echoed);
     }
 
     function error(response) {
         // If we're not local echo'ing messages, or if this message was not
         // locally echoed, show error in compose box
-        if (!feature_flags.local_echo || request.local_id === undefined) {
+        if (!locally_echoed) {
             compose_error(response, $('#new_message_content'));
             return;
         }
@@ -579,153 +289,38 @@ function send_message(request) {
     exports.transmit_message(request, success, error);
     server_events.assert_get_events_running("Restarting get_events because it was not running during send");
 
-    if (feature_flags.local_echo && locally_echoed) {
+    if (locally_echoed) {
         clear_compose_box();
     }
-}
+};
 
 exports.enter_with_preview_open = function () {
-    clear_preview_area();
+    exports.clear_preview_area();
     if (page_params.enter_sends) {
-        // If enter_sends is enabled, we just send the message
-        send_message();
+        // If enter_sends is enabled, we attempt to send the message
+        exports.finish();
     } else {
         // Otherwise, we return to the compose box and focus it
         $("#new_message_content").focus();
     }
 };
 
-exports.respond_to_message = function (opts) {
-    var message;
-    var msg_type;
-    // Before initiating a reply to a message, if there's an
-    // in-progress composition, snapshot it.
-    drafts.update_draft();
-
-    message = current_msg_list.selected_message();
-
-    if (message === undefined) {
-        return;
-    }
-
-    unread_ui.mark_message_as_read(message);
-
-    var stream = '';
-    var subject = '';
-    if (message.type === "stream") {
-        stream = message.stream;
-        subject = message.subject;
-    }
-
-    var pm_recipient = message.reply_to;
-    if (message.type === "private") {
-        if (opts.reply_type === "personal") {
-            // reply_to for private messages is everyone involved, so for
-            // personals replies we need to set the private message
-            // recipient to just the sender
-            pm_recipient = people.get_person_from_user_id(message.sender_id).email;
-        } else {
-            pm_recipient = people.pm_reply_to(message);
-        }
-    }
-    if (opts.reply_type === 'personal' || message.type === 'private') {
-        msg_type = 'private';
-    } else {
-        msg_type = message.type;
-    }
-    compose.start(msg_type, {stream: stream, subject: subject,
-                             private_message_recipient: pm_recipient,
-                             replying_to_message: message,
-                             trigger: opts.trigger});
-
-};
-
-exports.reply_with_mention = function (opts) {
-    exports.respond_to_message(opts);
-    var message = current_msg_list.selected_message();
-    var mention = '@**' + message.sender_full_name + '**';
-    $('#new_message_content').val(mention + ' ');
-};
-
-// This function is for debugging / data collection only.  Arguably it
-// should live in debug.js, but then it wouldn't be able to call
-// send_message() directly below.
-exports.test_send_many_messages = function (stream, subject, count) {
-    var num_sent = 0;
-
-    function do_send_one() {
-        var message = {};
-        num_sent += 1;
-
-        message.type = "stream";
-        message.to = stream;
-        message.subject = subject;
-        message.content = num_sent.toString();
-
-        send_message(message);
-
-        if (num_sent === count) {
-            return;
-        }
-
-        setTimeout(do_send_one, 1000);
-    }
-
-    do_send_one();
-};
-
 exports.finish = function () {
-    clear_invites();
+    exports.clear_invites();
 
     if (! compose.validate()) {
         return false;
     }
-    send_message();
-    clear_preview_area();
+    exports.send_message();
+    exports.clear_preview_area();
     // TODO: Do we want to fire the event even if the send failed due
     // to a server-side error?
     $(document).trigger($.Event('compose_finished.zulip'));
     return true;
 };
 
-$(function () {
-    $("#compose form").on("submit", function (e) {
-       e.preventDefault();
-       compose.finish();
-    });
-});
-
-exports.composing = function () {
-    return is_composing_message;
-};
-
-function get_or_set(fieldname, keep_leading_whitespace) {
-    // We can't hoist the assignment of 'elem' out of this lambda,
-    // because the DOM element might not exist yet when get_or_set
-    // is called.
-    return function (newval) {
-        var elem = $('#'+fieldname);
-        var oldval = elem.val();
-        if (newval !== undefined) {
-            elem.val(newval);
-        }
-        return keep_leading_whitespace ? util.rtrim(oldval) : $.trim(oldval);
-    };
-}
-
-exports.stream_name     = get_or_set('stream');
-exports.subject         = get_or_set('subject');
-// We can't trim leading whitespace in `new_message_content` because
-// of the indented syntax for multi-line code blocks.
-exports.message_content = get_or_set('new_message_content', true);
-exports.recipient       = get_or_set('private_message_recipient');
-
-exports.has_message_content = function () {
-    return exports.message_content() !== "";
-};
-
 exports.update_email = function (user_id, new_email) {
-    var reply_to = exports.recipient();
+    var reply_to = compose_state.recipient();
 
     if (!reply_to) {
         return;
@@ -733,114 +328,13 @@ exports.update_email = function (user_id, new_email) {
 
     reply_to = people.update_email_in_reply_to(reply_to, user_id, new_email);
 
-    exports.recipient(reply_to);
+    compose_state.recipient(reply_to);
 };
 
-// Checks if a stream exists. If not, displays an error and returns
-// false.
-function check_stream_for_send(stream_name, autosubscribe) {
-    var result = subs.check_stream_existence(stream_name, autosubscribe);
-
-    if (result === "error") {
-        compose_error(i18n.t("Error checking subscription"), $("#stream"));
-        $("#compose-send-button").removeAttr('disabled');
-        $("#sending-indicator").hide();
-    }
-
-    return result;
-}
-
-function validate_stream_message_mentions(stream_name) {
-    var current_stream = stream_data.get_sub(stream_name);
-    var stream_count = current_stream.subscribers.num_items();
-
-    // check if @all or @everyone is in the message
-    if (util.is_all_or_everyone_mentioned(exports.message_content()) &&
-        stream_count > compose.all_everyone_warn_threshold) {
-        if (user_acknowledged_all_everyone === undefined ||
-            user_acknowledged_all_everyone === false) {
-            // user has not seen a warning message yet if undefined
-            show_all_everyone_warnings();
-
-            $("#compose-send-button").removeAttr('disabled');
-            $("#sending-indicator").hide();
-            return false;
-        }
-    } else {
-        // the message no longer contains @all or @everyone
-        clear_all_everyone_warnings();
-    }
-    // at this point, the user has either acknowledged the warning or removed @all / @everyone
-    user_acknowledged_all_everyone = undefined;
-
-    return true;
-}
-
-function validate_stream_message_address_info(stream_name) {
-    var response;
-
-    if (!stream_data.is_subscribed(stream_name)) {
-        switch (check_stream_for_send(stream_name, page_params.narrow_stream !== undefined)) {
-        case "does-not-exist":
-            response = "<p>The stream <b>" +
-                Handlebars.Utils.escapeExpression(stream_name) + "</b> does not exist.</p>" +
-                "<p>Manage your subscriptions <a href='#streams/all'>on your Streams page</a>.</p>";
-            compose_error(response, $('#stream'));
-            return false;
-        case "error":
-            return false;
-        case "not-subscribed":
-            response = "<p>You're not subscribed to the stream <b>" +
-                Handlebars.Utils.escapeExpression(stream_name) + "</b>.</p>" +
-                "<p>Manage your subscriptions <a href='#streams/all'>on your Streams page</a>.</p>";
-            compose_error(response, $('#stream'));
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function validate_stream_message() {
-    var stream_name = exports.stream_name();
-    if (stream_name === "") {
-        compose_error(i18n.t("Please specify a stream"), $("#stream"));
-        return false;
-    }
-
-    if (page_params.mandatory_topics) {
-        var topic = exports.subject();
-        if (topic === "") {
-            compose_error(i18n.t("Please specify a topic"), $("#subject"));
-            return false;
-        }
-    }
-
-    if (!validate_stream_message_address_info(stream_name) ||
-        !validate_stream_message_mentions(stream_name)) {
-        return false;
-    }
-
-    return true;
-}
-// The function checks whether the recipients are users of the realm or cross realm users (bots
-// for now)
-function validate_private_message() {
-    if (exports.recipient() === "") {
-        compose_error(i18n.t("Please specify at least one recipient"), $("#private_message_recipient"));
-        return false;
-    } else if (page_params.is_zephyr_mirror_realm) {
-        // For Zephyr mirroring realms, the frontend doesn't know which users exist
-        return true;
-    }
-    var private_recipients = util.extract_pm_recipients(compose.recipient());
+exports.get_invalid_recipient_emails = function () {
+    var private_recipients = util.extract_pm_recipients(compose_state.recipient());
     var invalid_recipients = [];
-    var context = {};
     _.each(private_recipients, function (email) {
-        // This case occurs when exports.recipient() ends with ','
-        if (email === "") {
-            return;
-        }
         if (people.realm_get(email) !== undefined) {
             return;
         }
@@ -849,13 +343,143 @@ function validate_private_message() {
         }
         invalid_recipients.push(email);
     });
+
+    return invalid_recipients;
+};
+
+function check_unsubscribed_stream_for_send(stream_name, autosubscribe) {
+    var stream_obj = stream_data.get_sub(stream_name);
+    var result;
+    if (!stream_obj) {
+        return "does-not-exist";
+    }
+    if (!autosubscribe) {
+        return "not-subscribed";
+    }
+
+    // In the rare circumstance of the autosubscribe option, we
+    // *Synchronously* try to subscribe to the stream before sending
+    // the message.  This is deprecated and we hope to remove it; see
+    // #4650.
+    channel.post({
+        url: "/json/subscriptions/exists",
+        data: {stream: stream_name, autosubscribe: true},
+        async: false,
+        success: function (data) {
+            if (data.subscribed) {
+                result = "subscribed";
+            } else {
+                result = "not-subscribed";
+            }
+        },
+        error: function (xhr) {
+            if (xhr.status === 404) {
+                result = "does-not-exist";
+            } else {
+                result = "error";
+            }
+        },
+    });
+    return result;
+}
+
+function validate_stream_message_mentions(stream_name) {
+    var stream_count = stream_data.get_subscriber_count(stream_name) || 0;
+
+    // check if @all or @everyone is in the message
+    if (util.is_all_or_everyone_mentioned(compose_state.message_content()) &&
+        stream_count > compose.all_everyone_warn_threshold) {
+        if (user_acknowledged_all_everyone === undefined ||
+            user_acknowledged_all_everyone === false) {
+            // user has not seen a warning message yet if undefined
+            show_all_everyone_warnings();
+
+            $("#compose-send-button").prop('disabled', false);
+            $("#sending-indicator").hide();
+            return false;
+        }
+    } else {
+        // the message no longer contains @all or @everyone
+        exports.clear_all_everyone_warnings();
+    }
+    // at this point, the user has either acknowledged the warning or removed @all / @everyone
+    user_acknowledged_all_everyone = undefined;
+
+    return true;
+}
+
+exports.validate_stream_message_address_info = function (stream_name) {
+    if (stream_data.is_subscribed(stream_name)) {
+        return true;
+    }
+
+    var response;
+
+    switch (check_unsubscribed_stream_for_send(stream_name,
+                                               page_params.narrow_stream !== undefined)) {
+    case "does-not-exist":
+        response = "<p>The stream <b>" +
+            Handlebars.Utils.escapeExpression(stream_name) + "</b> does not exist.</p>" +
+            "<p>Manage your subscriptions <a href='#streams/all'>on your Streams page</a>.</p>";
+        compose_error(response, $('#stream'));
+        return false;
+    case "error":
+        compose_error(i18n.t("Error checking subscription"), $("#stream"));
+        return false;
+    case "not-subscribed":
+        response = "<p>You're not subscribed to the stream <b>" +
+            Handlebars.Utils.escapeExpression(stream_name) + "</b>.</p>" +
+            "<p>Manage your subscriptions <a href='#streams/all'>on your Streams page</a>.</p>";
+        compose_error(response, $('#stream'));
+        return false;
+    }
+    return true;
+};
+
+function validate_stream_message() {
+    var stream_name = compose_state.stream_name();
+    if (stream_name === "") {
+        compose_error(i18n.t("Please specify a stream"), $("#stream"));
+        return false;
+    }
+
+    if (page_params.realm_mandatory_topics) {
+        var topic = compose_state.subject();
+        if (topic === "") {
+            compose_error(i18n.t("Please specify a topic"), $("#subject"));
+            return false;
+        }
+    }
+
+    if (!exports.validate_stream_message_address_info(stream_name) ||
+        !validate_stream_message_mentions(stream_name)) {
+        return false;
+    }
+
+    return true;
+}
+
+// The function checks whether the recipients are users of the realm or cross realm users (bots
+// for now)
+function validate_private_message() {
+    if (compose_state.recipient() === "") {
+        compose_error(i18n.t("Please specify at least one recipient"), $("#private_message_recipient"));
+        return false;
+    } else if (page_params.realm_is_zephyr_mirror_realm) {
+        // For Zephyr mirroring realms, the frontend doesn't know which users exist
+        return true;
+    }
+
+    var invalid_recipients = exports.get_invalid_recipient_emails();
+
+    var context = {};
     if (invalid_recipients.length === 1) {
         context = {recipient: invalid_recipients.join()};
-        compose_error(i18n.t("The recipient __recipient__ is not valid ", context), $("#private_message_recipient"));
+        compose_error(i18n.t("The recipient __recipient__ is not valid", context), $("#private_message_recipient"));
         return false;
     } else if (invalid_recipients.length > 1) {
         context = {recipients: invalid_recipients.join()};
-        compose_error(i18n.t("The recipients __recipients__ are not valid ", context), $("#private_message_recipient"));
+        compose_error(i18n.t("The recipients __recipients__ are not valid", context), $("#private_message_recipient"));
         return false;
     }
     return true;
@@ -865,7 +489,7 @@ exports.validate = function () {
     $("#compose-send-button").attr('disabled', 'disabled').blur();
     $("#sending-indicator").show();
 
-    if (/^\s*$/.test(exports.message_content())) {
+    if (/^\s*$/.test(compose_state.message_content())) {
         compose_error(i18n.t("You have nothing to send!"), $("#new_message_content"));
         return false;
     }
@@ -875,42 +499,22 @@ exports.validate = function () {
         return false;
     }
 
-    if (exports.composing() === 'private') {
+    if (compose_state.get_message_type() === 'private') {
         return validate_private_message();
     }
     return validate_stream_message();
 };
 
-$(function () {
-    (function on_compose_resize(cb) {
-        var meta = {
-            compose_box: document.querySelector("#new_message_content"),
-            height: null,
-            mousedown: false,
-        };
+exports.initialize = function () {
+    $('#stream,#subject,#private_message_recipient').on('keyup', update_fade);
+    $('#stream,#subject,#private_message_recipient').on('change', update_fade);
 
-        meta.compose_box.addEventListener("mousedown", function () {
-            meta.mousedown = true;
-            meta.height = meta.compose_box.clientHeight;
-        });
+    $("#compose form").on("submit", function (e) {
+       e.preventDefault();
+       compose.finish();
+    });
 
-        // If the user resizes the compose box manually, we use the
-        // callback to stop autosize from adjusting the compose box height.
-        document.body.addEventListener("mouseup", function () {
-            if (meta.mousedown === true) {
-                meta.mousedown = false;
-                if (meta.height !== meta.compose_box.clientHeight) {
-                    meta.height = meta.compose_box.clientHeight;
-                    cb.call(meta.compose_box, meta.height);
-                }
-            }
-        });
-    }(function (height) {
-        // This callback disables autosize on the compose box.  It
-        // will be re-enabled when the compose box is next opened.
-        $("#new_message_content").trigger("autosize.destroy")
-            .height(height + "px");
-    }));
+    resize.watch_manual_resize("#new_message_content");
 
     // Run a feature test and decide whether to display
     // the "Attach files" button
@@ -936,9 +540,12 @@ $(function () {
 
     // Show a warning if a user @-mentions someone who will not receive this message
     $(document).on('usermention_completed.zulip', function (event, data) {
-        // Legacy strangeness: is_composing_message can be false, "stream", or "private"
+        if (compose_state.get_message_type() !== 'stream') {
+            return;
+        }
+
         // Disable for Zephyr mirroring realms, since we never have subscriber lists there
-        if (is_composing_message !== "stream" || page_params.is_zephyr_mirror_realm) {
+        if (page_params.realm_is_zephyr_mirror_realm) {
             return;
         }
 
@@ -951,15 +558,16 @@ $(function () {
             }
 
             if (compose_fade.would_receive_message(email) === false) {
-                var new_row = templates.render("compose-invite-users",
-                                               {email: email, name: data.mentioned.full_name});
                 var error_area = $("#compose_invite_users");
+                var existing_invites_area = $('#compose_invite_users .compose_invite_user');
 
-                var existing_invites = _.map($(".compose_invite_user", error_area), function (user_row) {
+                var existing_invites = _.map($(existing_invites_area), function (user_row) {
                     return $(user_row).data('useremail');
                 });
 
                 if (existing_invites.indexOf(email) === -1) {
+                    var context = {email: email, name: data.mentioned.full_name};
+                    var new_row = templates.render("compose-invite-users", context);
                     error_area.append(new_row);
                 }
 
@@ -974,7 +582,7 @@ $(function () {
 
         $(event.target).parents('.compose-all-everyone').remove();
         user_acknowledged_all_everyone = true;
-        clear_all_everyone_warnings();
+        exports.clear_all_everyone_warnings();
         compose.finish();
     });
 
@@ -1004,7 +612,7 @@ $(function () {
             $(event.target).attr('disabled', true);
         }
 
-        var stream_name = compose.stream_name();
+        var stream_name = compose_state.stream_name();
         var sub = stream_data.get_sub(stream_name);
         if (!sub) {
             // This should only happen if a stream rename occurs
@@ -1015,7 +623,7 @@ $(function () {
             return;
         }
 
-        subs.invite_user_to_stream(email, sub, success, failure);
+        stream_edit.invite_user_to_stream(email, sub, success, failure);
     });
 
     $("#compose_invite_users").on('click', '.compose_invite_close', function (event) {
@@ -1034,22 +642,35 @@ $(function () {
 
     $("#compose").on("click", "#attach_files", function (e) {
         e.preventDefault();
+        if (clone_file_input === undefined) {
+            clone_file_input = $('#file_input').clone(true);
+        }
         $("#compose #file_input").trigger("click");
     } );
 
+    function show_preview(rendered_content) {
+        var preview_html;
+        if (rendered_content.indexOf("<p>/me ") === 0) {
+            // Handle previews of /me messages
+            preview_html = "<strong>" + page_params.full_name + "</strong> " + rendered_content.slice(4 + 3, -4);
+        } else {
+            preview_html = rendered_content;
+        }
+        $("#preview_content").html(preview_html);
+    }
 
     $("#compose").on("click", "#markdown_preview", function (e) {
         e.preventDefault();
-        var message = $("#new_message_content").val();
+        var content = $("#new_message_content").val();
         $("#new_message_content").hide();
         $("#markdown_preview").hide();
         $("#undo_markdown_preview").show();
         $("#preview_message_area").show();
 
-        if (message.length === 0) {
-            $("#preview_content").html(i18n.t("Nothing to preview"));
+        if (content.length === 0) {
+            show_preview(i18n.t("Nothing to preview"));
         } else {
-            if (echo.contains_bugdown(message))  {
+            if (markdown.contains_backend_only_syntax(content))  {
                 var spinner = $("#markdown_preview_spinner").expectOne();
                 loading.make_indicator(spinner);
             } else {
@@ -1058,25 +679,28 @@ $(function () {
                 // marked.js frontend processor, we render using the
                 // frontend markdown processor message (but still
                 // render server-side to ensure the preview is
-                // accurate; if the `echo.contains_bugdown` logic is
+                // accurate; if the `markdown.contains_backend_only_syntax` logic is
                 // incorrect wrong, users will see a brief flicker).
-                $("#preview_content").html(echo.apply_markdown(message));
+                var message_obj = {
+                    raw_content: content,
+                };
+                markdown.apply_markdown(message_obj);
             }
             channel.post({
                 url: '/json/messages/render',
                 idempotent: true,
-                data: {content: message},
+                data: {content: content},
                 success: function (response_data) {
-                    if (echo.contains_bugdown(message)) {
+                    if (markdown.contains_backend_only_syntax(content)) {
                         loading.destroy_indicator($("#markdown_preview_spinner"));
                     }
-                    $("#preview_content").html(response_data.rendered);
+                    show_preview(response_data.rendered);
                 },
                 error: function () {
-                    if (echo.contains_bugdown(message)) {
+                    if (markdown.contains_backend_only_syntax(content)) {
                         loading.destroy_indicator($("#markdown_preview_spinner"));
                     }
-                    $("#preview_content").html(i18n.t("Failed to generate preview"));
+                    show_preview(i18n.t("Failed to generate preview"));
                 },
             });
         }
@@ -1084,7 +708,7 @@ $(function () {
 
     $("#compose").on("click", "#undo_markdown_preview", function (e) {
         e.preventDefault();
-        clear_preview_area();
+        exports.clear_preview_area();
     });
 
     $("#compose").on("click", "#attach_dropbox_files", function (e) {
@@ -1109,7 +733,7 @@ $(function () {
         $("#compose-send-button").attr("disabled", "");
         $("#send-status").addClass("alert-info")
                          .show();
-        $(".send-status-close").one('click', abort_xhr);
+        $(".send-status-close").one('click', exports.abort_xhr);
         $("#error-msg").html(
             $("<p>").text(i18n.t("Uploading…"))
                     .after('<div class="progress progress-striped active">' +
@@ -1125,7 +749,7 @@ $(function () {
         var msg;
         $("#send-status").addClass("alert-error")
                         .removeClass("alert-info");
-        $("#compose-send-button").removeAttr("disabled");
+        $("#compose-send-button").prop("disabled", false);
         switch (err) {
         case 'BrowserNotSupported':
             msg = i18n.t("File upload is not yet available for your browser.");
@@ -1135,17 +759,20 @@ $(function () {
             break;
         case 'FileTooLarge':
             // sanitization not needed as the file name is not potentially parsed as HTML, etc.
-            msg = "\"" + file.name + "\"" + i18n.t(" was too large; the maximum file size is 25MiB.");
+            var context = { file_name: file.name };
+            msg = i18n.t('"__file_name__" was too large; the maximum file size is 25MiB.', context);
             break;
         case 'REQUEST ENTITY TOO LARGE':
             msg = i18n.t("Sorry, the file was too large.");
             break;
         case 'QuotaExceeded':
-            msg = i18n.t("Upload would exceed your maximum quota."
-                      + " Consider deleting some previously uploaded files.");
-            break;
+            var translation_part1 = i18n.t('Upload would exceed your maximum quota. You can delete old attachments to free up space.');
+            var translation_part2 = i18n.t('Click here');
+            msg = translation_part1 + ' <a href="#settings/uploaded-files">' + translation_part2 + '</a>';
+            $("#error-msg").html(msg);
+            return;
         default:
-            msg = i18n.t("An unknown error occured.");
+            msg = i18n.t("An unknown error occurred.");
             break;
         }
         $("#error-msg").text(msg);
@@ -1160,8 +787,8 @@ $(function () {
         var filename = split_uri[split_uri.length - 1];
         // Urgh, yet another hack to make sure we're "composing"
         // when text gets added into the composebox.
-        if (!compose.composing()) {
-            compose.start('stream');
+        if (!compose_state.composing()) {
+            compose_actions.start('stream');
         }
 
         var uri = make_upload_absolute(response.uri);
@@ -1173,8 +800,8 @@ $(function () {
             // This is a dropped file, so make the filename a link to the image
             textbox.val(textbox.val() + "[" + filename + "](" + uri + ")" + " ");
         }
-        exports.autosize_textarea();
-        $("#compose-send-button").removeAttr("disabled");
+        compose_ui.autosize_textarea();
+        $("#compose-send-button").prop("disabled", false);
         $("#send-status").removeClass("alert-info")
                          .hide();
 
@@ -1196,7 +823,7 @@ $(function () {
     }
 
     $("#compose").filedrop({
-        url: "/json/upload_file",
+        url: "/json/user_uploads",
         fallback_id: "file_input",
         paramname: "file",
         maxfilesize: page_params.maxfilesize,
@@ -1211,31 +838,22 @@ $(function () {
         uploadFinished: uploadFinished,
         rawDrop: function (contents) {
             var textbox = $("#new_message_content");
-            if (!compose.composing()) {
-                compose.start('stream');
+            if (!compose_state.composing()) {
+                compose_actions.start('stream');
             }
             textbox.val(textbox.val() + contents);
-            exports.autosize_textarea();
+            compose_ui.autosize_textarea();
         },
     });
 
     if (page_params.narrow !== undefined) {
         if (page_params.narrow_topic !== undefined) {
-            compose.start("stream", {subject: page_params.narrow_topic});
+            compose_actions.start("stream", {subject: page_params.narrow_topic});
         } else {
-            compose.start("stream", {});
+            compose_actions.start("stream", {});
         }
     }
-
-    $(document).on('message_id_changed', function (event) {
-        if (exports.send_times_data[event.old_id] !== undefined) {
-            var value = exports.send_times_data[event.old_id];
-            delete exports.send_times_data[event.old_id];
-            exports.send_times_data[event.new_id] =
-                _.extend({}, exports.send_times_data[event.old_id], value);
-        }
-    });
-});
+};
 
 return exports;
 }());

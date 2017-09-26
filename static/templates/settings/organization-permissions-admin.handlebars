@@ -1,0 +1,126 @@
+<div id="organization-permissions" data-name="organization-permissions" class="settings-section">
+    <form class="form-horizontal admin-realm-form org-permissions-form">
+        <h3 class="light">{{t "Joining the organization" }}</h3>
+
+        <div class="alert" id="admin-realm-restricted-to-domain-status"></div>
+        <div class="alert" id="admin-realm-invite-required-status"></div>
+        <div class="alert" id="admin-realm-invite-by-admins-only-status"></div>
+        <div class="alert" id="admin-realm-email-changes-disabled-status"></div>
+        <div class="alert" id="admin-realm-name-changes-disabled-status"></div>
+        <div class="alert" id="admin-realm-add-emoji-by-admins-only-status"></div>
+        <div class="alert" id="admin-realm-create-stream-by-admins-only-status"></div>
+        <div class="alert" id="admin-realm-waiting-period-threshold-status"></div>
+
+        <div class="side-padded-container m-10 inline-block organization-permissions-parent">
+            <div class="input-group admin-restricted-to-domain">
+                <label class="checkbox">
+                    <input type="checkbox" name="realm_restricted_to_domain" id="id_realm_restricted_to_domain"
+                           {{#if realm_restricted_to_domain}}checked="checked"{{/if}} />
+                    <span></span>
+                </label>
+                <label for="id_realm_restricted_to_domain" id="realm_restricted_to_domains_label" class="inline-block"
+                    title="{{#tr this}}If checked, only users with an e-mail address ending in these domains will be able to join the organization.{{/tr}}">
+                </label>
+                {{#if is_admin }}
+                <a data-toggle="modal" href="#realm_domains_modal">{{t "[Add or Change]" }}</a>
+                {{/if}}
+            </div>
+
+            <div class="input-group">
+                <label class="checkbox">
+                    <input type="checkbox" name="realm_invite_required" id="id_realm_invite_required"
+                           {{#if realm_invite_required}}checked="checked"{{/if}} />
+                    <span></span>
+                </label>
+                <label for="id_realm_invite_required" id="realm_invite_required_label" class="inline-block"
+                    title="{{t 'If checked, users must be invited in order to join your organization.' }}">
+                    {{t "Users cannot join without an invitation" }}
+                </label>
+            </div>
+
+            <div class="input-group disableable {{#unless realm_invite_required}}control-label-disabled{{/unless}}">
+                <label class="checkbox">
+                    <input type="checkbox" name="realm_invite_by_admins_only" id="id_realm_invite_by_admins_only"
+                           {{#unless realm_invite_required}}disabled="disabled"{{/unless}}
+                           {{#if realm_invite_by_admins_only}}checked="checked"{{/if}} />
+                    <span></span>
+                </label>
+                <label for="id_realm_invite_by_admins_only" id="id_realm_invite_by_admins_only_label" class="inline-block"
+                    title="{{t 'If checked, only administrators may invite new users.' }}">
+                    {{t "Only admins can invite new users" }}
+                </label>
+            </div>
+        </div>
+
+        <h3 class="light">{{t "User identity" }}</h3>
+        <div class="side-padded-container m-10 inline-block organization-permissions-parent">
+            <div class="input-group">
+                <label class="checkbox">
+                    <input type="checkbox" id="id_realm_name_changes_disabled" name="realm_name_changes_disabled"
+                           {{#if realm_name_changes_disabled}}checked="checked"{{/if}} />
+                    <span></span>
+                </label>
+                <label for="id_realm_name_changes_disabled" id="id_realm_name_changes_disabled_label" class="inline-block"
+                    title="{{t 'If checked, users will be unable to change their name.' }}">
+                    {{t "Prevent users from changing their name" }}
+                </label>
+            </div>
+
+            <div class="input-group">
+                <label class="checkbox">
+                    <input type="checkbox" id="id_realm_email_changes_disabled" name="realm_email_changes_disabled"
+                           {{#if realm_email_changes_disabled}}checked="checked"{{/if}} />
+                    <span></span>
+                </label>
+                <label for="id_realm_email_changes_disabled" id="id_realm_email_changes_disabled_label" class="inline-block"
+                    title="{{t 'If checked, users will be unable to change their email address.' }}">
+                    {{t "Prevent users from changing their email address" }}
+                </label>
+            </div>
+        </div>
+
+        <h3 class="light">{{t "Streams & custom emoji" }}</h3>
+        <div class="side-padded-container m-10 inline-block organization-permissions-parent">
+            <div class="input-group">
+                <label class="checkbox">
+                    <input type="checkbox" id="id_realm_create_stream_by_admins_only" name="realm_create_stream_by_admins_only"
+                           {{#if realm_create_stream_by_admins_only}}checked="checked"{{/if}} />
+                    <span></span>
+                </label>
+                <label for="id_realm_create_stream_by_admins_only" id="id_realm_create_stream_by_admins_only_label" class="inline-block"
+                    title="{{t 'If checked, only administrators may create new streams.' }}">
+                    {{t "Prevent users from creating streams" }}
+                </label>
+            </div>
+
+
+            <div class="input-group disableable">
+                <label for="aitin">{{t "Waiting period for stream creation (in days)" }}</label>
+                <input type="text" id="id_realm_waiting_period_threshold"
+                     name="realm_waiting_period_threshold"
+                     class="admin-realm-message-content-edit-limit-minutes"
+                     value="{{ realm_waiting_period_threshold }}"/>
+            </div>
+
+            <div class="input-group">
+                <label class="checkbox">
+                    <input type="checkbox" id="id_realm_add_emoji_by_admins_only" name="realm_add_emoji_by_admins_only"
+                           {{#if realm_add_emoji_by_admins_only}}checked="checked"{{/if}} />
+                    <span></span>
+                </label>
+                <label for="id_realm_add_emoji_by_admins_only" id="id_realm_add_emoji_by_admins_only_label" class="inline-block"
+                    title="{{t 'If checked, only administrators may add new emoji.'}}">
+                    {{t "Prevent users from adding custom emoji" }}
+                </label>
+            </div>
+        </div>
+
+        {{#if is_admin }}
+        <div class="input-group organization-submission">
+            <button type="submit" class="button rounded sea-green">
+                {{t 'Save changes' }}
+            </button>
+        </div>
+        {{/if}}
+    </form>
+</div>

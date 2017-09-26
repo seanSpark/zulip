@@ -9,7 +9,7 @@ var exports = {};
 var scroll_positions = {};
 
 exports.initialize = function () {
-    admin.show_or_hide_menu_item();
+    i18n.ensure_i18n(admin.show_or_hide_menu_item);
 
     $('#gear-menu a[data-toggle="tab"]').on('show', function (e) {
         // Save the position of our old tab away, before we switch
@@ -20,10 +20,7 @@ exports.initialize = function () {
         var target_tab = $(e.target).attr('href');
         resize.resize_bottom_whitespace();
         // Hide all our error messages when switching tabs
-        $('.alert-error').hide();
-        $('.alert-success').hide();
-        $('.alert-info').hide();
-        $('.alert').hide();
+        $('.alert').removeClass("show");
 
         // Set the URL bar title to show the sub-page you're currently on.
         var browser_url = target_tab;
@@ -35,19 +32,33 @@ exports.initialize = function () {
         // After we show the new tab, restore its old scroll position
         // (we apparently have to do this after setting the hash,
         // because otherwise that action may scroll us somewhere.)
-        if (scroll_positions.hasOwnProperty(target_tab)) {
-            message_viewport.scrollTop(scroll_positions[target_tab]);
-        } else {
-            if (target_tab === '#home') {
-                navigate.scroll_to_selected();
+        if (target_tab === '#home') {
+            if (scroll_positions.hasOwnProperty(target_tab)) {
+                message_viewport.scrollTop(scroll_positions[target_tab]);
             } else {
-                message_viewport.scrollTop(0);
+                navigate.scroll_to_selected();
             }
         }
     });
 
     // The admin and settings pages are generated client-side through
     // templates.
+};
+
+exports.open = function () {
+    $("#settings-dropdown").click();
+    // there are invisible li tabs, which should not be clicked.
+    $("#gear-menu").find("li:not(.invisible) a").eq(0).focus();
+};
+
+exports.is_open = function () {
+    return $(".dropdown").hasClass("open");
+};
+
+exports.close = function () {
+    if (exports.is_open()) {
+        $(".dropdown").removeClass("open");
+    }
 };
 
 return exports;

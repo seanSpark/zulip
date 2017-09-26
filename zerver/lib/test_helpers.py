@@ -2,8 +2,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from contextlib import contextmanager
 from typing import (cast, Any, Callable, Dict, Generator, Iterable, Iterator, List, Mapping,
-                    Optional, Set, Sized, Tuple, Union, IO)
+                    Optional, Set, Sized, Tuple, Union, IO, Text)
 
+from django.core import signing
 from django.core.urlresolvers import LocaleRegexURLResolver
 from django.conf import settings
 from django.test import TestCase
@@ -32,7 +33,7 @@ from zerver.lib.actions import (
 from zerver.models import (
     get_recipient,
     get_stream,
-    get_user_profile_by_email,
+    get_user,
     Client,
     Message,
     Realm,
@@ -56,7 +57,6 @@ import ujson
 import unittest
 from six.moves import urllib
 from six import binary_type
-from typing import Text
 from zerver.lib.str_utils import NonBinaryStr
 
 from contextlib import contextmanager
@@ -78,12 +78,21 @@ class MockLDAP(fakeldap.MockLDAP):
         pass
 
 @contextmanager
+def stub_event_queue_user_events(event_queue_return, user_events_return):
+    # type: (Any, Any) -> Iterator[None]
+    with mock.patch('zerver.lib.events.request_event_queue',
+                    return_value=event_queue_return):
+        with mock.patch('zerver.lib.events.get_user_events',
+                        return_value=user_events_return):
+            yield
+
+@contextmanager
 def simulated_queue_client(client):
-    # type: (type) -> Iterator[None]
+    # type: (Callable) -> Iterator[None]
     real_SimpleQueueClient = queue_processors.SimpleQueueClient
-    queue_processors.SimpleQueueClient = client # type: ignore # https://github.com/JukkaL/mypy/issues/1152
+    queue_processors.SimpleQueueClient = client  # type: ignore # https://github.com/JukkaL/mypy/issues/1152
     yield
-    queue_processors.SimpleQueueClient = real_SimpleQueueClient # type: ignore # https://github.com/JukkaL/mypy/issues/1152
+    queue_processors.SimpleQueueClient = real_SimpleQueueClient  # type: ignore # https://github.com/JukkaL/mypy/issues/1152
 
 @contextmanager
 def tornado_redirected_to_list(lst):
@@ -101,7 +110,7 @@ def tornado_redirected_to_list(lst):
 @contextmanager
 def simulated_empty_cache():
     # type: () -> Generator[List[Tuple[str, Union[Text, List[Text]], Text]], None, None]
-    cache_queries = [] # type: List[Tuple[str, Union[Text, List[Text]], Text]]
+    cache_queries = []  # type: List[Tuple[str, Union[Text, List[Text]], Text]]
 
     def my_cache_get(key, cache_name=None):
         # type: (Text, Optional[str]) -> Optional[Dict[Text, Any]]
@@ -129,7 +138,7 @@ def queries_captured(include_savepoints=False):
     the with statement.
     '''
 
-    queries = [] # type: List[Dict[str, Union[str, binary_type]]]
+    queries = []  # type: List[Dict[str, Union[str, binary_type]]]
 
     def wrapper_execute(self, action, sql, params=()):
         # type: (TimeTrackingCursor, Callable, NonBinaryStr, Iterable[Any]) -> None
@@ -152,18 +161,18 @@ def queries_captured(include_savepoints=False):
 
     def cursor_execute(self, sql, params=()):
         # type: (TimeTrackingCursor, NonBinaryStr, Iterable[Any]) -> None
-        return wrapper_execute(self, super(TimeTrackingCursor, self).execute, sql, params) # type: ignore # https://github.com/JukkaL/mypy/issues/1167
-    TimeTrackingCursor.execute = cursor_execute # type: ignore # https://github.com/JukkaL/mypy/issues/1167
+        return wrapper_execute(self, super(TimeTrackingCursor, self).execute, sql, params)  # type: ignore # https://github.com/JukkaL/mypy/issues/1167
+    TimeTrackingCursor.execute = cursor_execute  # type: ignore # https://github.com/JukkaL/mypy/issues/1167
 
     def cursor_executemany(self, sql, params=()):
         # type: (TimeTrackingCursor, NonBinaryStr, Iterable[Any]) -> None
-        return wrapper_execute(self, super(TimeTrackingCursor, self).executemany, sql, params) # type: ignore # https://github.com/JukkaL/mypy/issues/1167 # nocoverage -- doesn't actually get used in tests
-    TimeTrackingCursor.executemany = cursor_executemany # type: ignore # https://github.com/JukkaL/mypy/issues/1167
+        return wrapper_execute(self, super(TimeTrackingCursor, self).executemany, sql, params)  # type: ignore # https://github.com/JukkaL/mypy/issues/1167 # nocoverage -- doesn't actually get used in tests
+    TimeTrackingCursor.executemany = cursor_executemany  # type: ignore # https://github.com/JukkaL/mypy/issues/1167
 
     yield queries
 
-    TimeTrackingCursor.execute = old_execute # type: ignore # https://github.com/JukkaL/mypy/issues/1167
-    TimeTrackingCursor.executemany = old_executemany # type: ignore # https://github.com/JukkaL/mypy/issues/1167
+    TimeTrackingCursor.execute = old_execute  # type: ignore # https://github.com/JukkaL/mypy/issues/1167
+    TimeTrackingCursor.executemany = old_executemany  # type: ignore # https://github.com/JukkaL/mypy/issues/1167
 
 @contextmanager
 def stdout_suppressed():
@@ -171,7 +180,7 @@ def stdout_suppressed():
     """Redirect stdout to /dev/null."""
 
     with open(os.devnull, 'a') as devnull:
-        stdout, sys.stdout = sys.stdout, devnull  # type: ignore
+        stdout, sys.stdout = sys.stdout, devnull
         yield stdout
         sys.stdout = stdout
 
@@ -181,7 +190,7 @@ def get_test_image_file(filename):
     return open(os.path.join(test_avatar_dir, filename), 'rb')
 
 def avatar_disk_path(user_profile, medium=False):
-    # type: (UserProfile, bool) -> str
+    # type: (UserProfile, bool) -> Text
     avatar_url_path = avatar_url(user_profile, medium)
     avatar_disk_path = os.path.join(settings.LOCAL_UPLOADS_DIR, "avatars",
                                     avatar_url_path.split("/")[-2],
@@ -196,7 +205,7 @@ def make_client(name):
 def find_key_by_email(address):
     # type: (Text) -> Optional[Text]
     from django.core.mail import outbox
-    key_regex = re.compile("accounts/do_confirm/([a-f0-9]{40})>")
+    key_regex = re.compile("accounts/do_confirm/([a-z0-9]{24})>")
     for message in reversed(outbox):
         if address in message.to:
             return key_regex.search(message.body).groups()[0]
@@ -211,10 +220,6 @@ def find_pattern_in_email(address, pattern):
             return key_regex.search(message.body).group(0)
     return None  # nocoverage -- in theory a test might want this case, but none do
 
-def message_ids(result):
-    # type: (Dict[str, Any]) -> Set[int]
-    return set(message['id'] for message in result['messages'])
-
 def message_stream_count(user_profile):
     # type: (UserProfile) -> int
     return UserMessage.objects. \
@@ -228,7 +233,7 @@ def most_recent_usermessage(user_profile):
         select_related("message"). \
         filter(user_profile=user_profile). \
         order_by('-message')
-    return query[0] # Django does LIMIT here
+    return query[0]  # Django does LIMIT here
 
 def most_recent_message(user_profile):
     # type: (UserProfile) -> Message
@@ -259,21 +264,31 @@ class POSTRequestMock(object):
     method = "POST"
 
     def __init__(self, post_data, user_profile):
-        # type: (Dict[str, Any], UserProfile) -> None
+        # type: (Dict[str, Any], Optional[UserProfile]) -> None
         self.GET = {}  # type: Dict[str, Any]
         self.POST = post_data
         self.user = user_profile
         self._tornado_handler = DummyHandler()
-        self._log_data = {} # type: Dict[str, Any]
+        self._log_data = {}  # type: Dict[str, Any]
         self.META = {'PATH_INFO': 'test'}
+        self.path = ''
 
 class HostRequestMock(object):
     """A mock request object where get_host() works.  Useful for testing
     routes that use Zulip's subdomains feature"""
 
-    def __init__(self, host=settings.EXTERNAL_HOST):
-        # type: (Text) -> None
+    def __init__(self, user_profile=None, host=settings.EXTERNAL_HOST):
+        # type: (UserProfile, Text) -> None
         self.host = host
+        self.GET = {}  # type: Dict[str, Any]
+        self.POST = {}  # type: Dict[str, Any]
+        self.META = {'PATH_INFO': 'test'}
+        self.path = ''
+        self.user = user_profile
+        self.method = ''
+        self.body = ''
+        self.content_type = ''
+        self._email = ''
 
     def get_host(self):
         # type: () -> Text
@@ -291,9 +306,9 @@ class MockPythonResponse(object):
         return self.status_code == 200
 
 INSTRUMENTING = os.environ.get('TEST_INSTRUMENT_URL_COVERAGE', '') == 'TRUE'
-INSTRUMENTED_CALLS = [] # type: List[Dict[str, Any]]
+INSTRUMENTED_CALLS = []  # type: List[Dict[str, Any]]
 
-UrlFuncT = Callable[..., HttpResponse] # TODO: make more specific
+UrlFuncT = Callable[..., HttpResponse]  # TODO: make more specific
 
 def append_instrumentation_data(data):
     # type: (Dict[str, Any]) -> None
@@ -335,7 +350,7 @@ def write_instrumentation_reports(full_suite):
         from zproject.urls import urlpatterns, v1_api_and_json_patterns
 
         # Find our untested urls.
-        pattern_cnt = collections.defaultdict(int) # type: Dict[str, int]
+        pattern_cnt = collections.defaultdict(int)  # type: Dict[str, int]
 
         def re_strip(r):
             # type: (Any) -> str
@@ -390,15 +405,21 @@ def write_instrumentation_reports(full_suite):
         assert len(pattern_cnt) > 100
         untested_patterns = set([p for p in pattern_cnt if pattern_cnt[p] == 0])
 
-        # We exempt some patterns that are called via Tornado.
         exempt_patterns = set([
+            # We exempt some patterns that are called via Tornado.
             'api/v1/events',
             'api/v1/register',
+            # We also exempt some development environment debugging
+            # static content URLs, since the content they point to may
+            # or may not exist.
+            'coverage/(?P<path>.*)',
+            'node-coverage/(?P<path>.*)',
+            'docs/(?P<path>.*)',
         ])
 
         untested_patterns -= exempt_patterns
 
-        var_dir = 'var' # TODO make sure path is robust here
+        var_dir = 'var'  # TODO make sure path is robust here
         fn = os.path.join(var_dir, 'url_coverage.txt')
         with open(fn, 'w') as f:
             for call in calls:
@@ -456,3 +477,11 @@ def get_all_templates():
                 process(template_dir, dirpath, fnames)
 
     return templates
+
+def unsign_subdomain_cookie(result):
+    # type: (HttpResponse) -> Dict[str, Any]
+    key = 'subdomain.signature'
+    salt = key + 'zerver.views.auth'
+    cookie = result.cookies.get(key)
+    value = signing.get_cookie_signer(salt=salt).unsign(cookie.value, max_age=15)
+    return ujson.loads(value)

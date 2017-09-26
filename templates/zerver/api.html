@@ -9,23 +9,12 @@
 
     <p><strong>Don't want to make it yourself?</strong> Zulip <a href="/integrations">already integrates with lots of services</a>.</p>
 
-    <br/>
-    <div class="centered-button">
-       <a href="https://www.zulip.org/dist/api/python-zulip_0.2.5.tar.gz" class="btn btn-large btn-primary"><i class="icon-vector-download"></i> Download Python bindings and examples<span class="button-muted">Version 0.2.5</span></a>
-    </div>
-
-
     <p>&nbsp;</p>
 
     <h3>Installation instructions</h3>
     <h4>Python</h4>
-    <p>This package uses <tt>distutils</tt>, so you can just run <code>python setup.py install</code> after downloading.</p>
-    <p>If you have <tt>setuptools</tt> installed on your system then the application's dependencies will be downloaded and installed automatically from <a href="https://pypi.python.org/">PyPI</a>. Otherwise, you'll need to make sure you have these Python libraries installed:</p>
-    <ul>
-      <li><tt>simplejson</tt></li>
-      <li><tt>requests</tt> (0.12.1 or later)</li>
-    </ul>
-    <p>&nbsp;</p>
+    <p>Install it with <a href="https://pypi.python.org/pypi/zulip/">pip</a>:</p>
+    <pre><code>pip install zulip</code></pre>
     <h4>JavaScript</h4>
     <p>Install it with <a href="https://www.npmjs.com/package/zulip-js">npm</a>:</p>
     <pre><code>npm install zulip-js</code></pre>
@@ -48,6 +37,13 @@
 These code snippets are generated using our very own Zulip tool, by
 sending them to myself in a code block, and then using the inspector
 to pull out the resulting HTML :)
+
+Sample steps to do:
+1. Write code in Zulip message box.
+2. Put it in a multiline codeblock and specify a language.
+3. Click on 'preview'.
+4. Inspect and copy the HTML.
+
 #}
 
 <h4>Stream message</h4>
@@ -162,12 +158,12 @@ to pull out the resulting HTML :)
 <span class="p">});</span>
 
 <span class="c1">// Register queue to receive messages for user</span>
-<span class="nx">zulip</span><span class="p">.</span><span class="nx">queues</span><span class="p">.</span><span class="nx">register</span><span class="p">({</span>
+<span class="nx">client</span><span class="p">.</span><span class="nx">queues</span><span class="p">.</span><span class="nx">register</span><span class="p">({</span>
   <span class="nx">event_types</span><span class="o">:</span> <span class="p">[</span><span class="s1">'message'</span><span class="p">]</span>
 <span class="p">}).</span><span class="nx">then</span><span class="p">((</span><span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
   <span class="c1">// Retrieve events from a queue</span>
   <span class="c1">// Blocking until there is an event (or the request times out)</span>
-  <span class="nx">zulip</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">retrieve</span><span class="p">({</span>
+  <span class="nx">client</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">retrieve</span><span class="p">({</span>
     <span class="nx">queue_id</span><span class="o">:</span> <span class="nx">res</span><span class="p">.</span><span class="nx">queue_id</span><span class="p">,</span>
     <span class="nx">last_event_id</span><span class="o">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="nx">dont_block</span><span class="o">:</span> <span class="kc">false</span>
@@ -186,8 +182,8 @@ to pull out the resulting HTML :)
     <p>Create a bot:</p>
     <img class="screenshot" src="/static/images/api/create-bot.png" />
 
-    <p>Look for the bot's email and API key:
-    <img class="screenshot" src="/static/images/api/bot-key.png" /></p>
+    <p>Look for the bot's email and API key:</p>
+    <img class="screenshot" src="/static/images/api/bot-key.png" />
 
     <p>If you prefer to send messages as your own user, you can also find your API key on your <a href="/#settings" target="_blank">settings page</a>.</p>
     <p>When using our python bindings, you may either specify the user

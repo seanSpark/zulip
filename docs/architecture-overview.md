@@ -48,7 +48,7 @@ private one-on-one and group conversations, inline image previews, team
 presence/buddy lists, a rich API, Markdown message support, and numerous
 integrations with other services. The maintainer team aims to support
 users who connect to Zulip using dedicated iOS, Android, Linux, Windows,
-and Mac OS X clients, as well as people using modern web browsers or
+and macOS clients, as well as people using modern web browsers or
 dedicated Zulip API clients.
 
 A server can host multiple Zulip *realms* (organizations) at the same
@@ -118,6 +118,24 @@ There is detailed documentation on the
 [real-time push and event queue system](events-system.html); most of
 the code is in `zerver/tornado`.
 
+#### HTML templates, JavaScript, etc.
+
+Zulip's HTML is primarily implemented using two types of HTML
+templates: backend templates (powered by the [Jinja2][] template
+engine used for logged-out ("portico") pages and the webapp's base
+content) and frontend templates (powered by [Handlebars][]) used for
+live-rendering HTML from JavaScript for things like the main message
+feed.
+
+For more details on the frontend, see our documentation on
+[translation](translating.html),
+[templates](html-templates.html),
+[directory structure](directory-structure.html), and
+[the static asset pipeline](front-end-build-process.html).
+
+[Jinja2]: http://jinja.pocoo.org/
+[Handlebars]: http://handlebarsjs.com/
+
 ### nginx
 
 nginx is the front-end web server to all Zulip traffic; it serves static
@@ -147,6 +165,10 @@ from outside.
     `puppet/zulip/files/nginx/zulip-include-frontend/upstreams`). We use
     `zproject/wsgi.py` to implement uWSGI here (see
     `django.core.wsgi`).
+- By default (i.e. if `LOCAL_UPLOADS_DIR` is set), nginx will serve
+  user-uploaded content like avatars, custom emoji, and uploaded
+  files.  However, one can configure Zulip to store these in a cloud
+  storage service like Amazon S3 instead.
 
 ### Supervisor
 
@@ -154,8 +176,8 @@ We use [supervisord](http://supervisord.org/) to start server processes,
 restart them automatically if they crash, and direct logging.
 
 The config file is
-`zulip/puppet/zulip/files/supervisor/conf.d/zulip.conf`. This is where
-Tornado and Django are set up, as well as a number of background
+`zulip/puppet/zulip/templates/supervisor/zulip.conf.template.erb`. This
+is where Tornado and Django are set up, as well as a number of background
 processes that process event queues. We use event queues for the kinds
 of tasks that are best run in the background because they are
 expensive (in terms of performance) and don't have to be synchronous
@@ -175,7 +197,7 @@ Redis is used for a few very short-term data stores, such as in the
 basis of `zerver/lib/rate_limiter.py`, a per-user rate limiting scheme
 [example](http://blog.domaintools.com/2013/04/rate-limiting-with-redis/)),
 and the [email-to-Zulip
-integration](https://zulipchat.com/integrations/#email).
+integration](https://zulipchat.com/integrations/doc/email).
 
 Redis is configured in `zulip/puppet/zulip/files/redis` and it's a
 pretty standard configuration except for the last line, which turns off
@@ -225,7 +247,7 @@ extension is handled by `tools/postgres-init-dev-db` (invoked by
 `tools/provision`).  That file also manages setting up the
 development postgresql user.
 
-`tools/provision also invokes `tools/do-destroy-rebuild-database`
+`tools/provision` also invokes `tools/do-destroy-rebuild-database`
 to create the actual database with its schema.
 
 ### Nagios
@@ -254,11 +276,15 @@ are welcome!
     topic]", or "Link to this conversation". To avoid visual clutter,
     the chevron only appears in the web UI upon hover.
 
+* **huddle**: What the codebase calls a "group private message".
+
 * **message editing**: If the realm admin allows it, then after a user
     posts a message, the user has a few minutes to click "Edit" and
     change the content of their message. If they do, Zulip adds a
     marker such as "(EDITED)" at the top of the message, visible to
     anyone who can see the message.
+
+* **realm**: What the codebase calls an "organization" in the UI.
 
 * **recipient bar**: A visual indication of the context of a message
     or group of messages, displaying the stream and topic or private
@@ -276,3 +302,11 @@ are welcome!
     constraint. Whether a user has or has not starred a particular
     message is private; other users and realm admins don't know
     whether a message has been starred, or by whom.
+
+* **subject**: What the codebase calls a "topic" in many places.
+
+* **bankruptcy**: When a user has been off Zulip for several days and
+    has hundreds of unread messages, they are prompted for whether
+    they want to mark all their unread messages as read.  This is
+    called "declaring bankruptcy" (in reference to the concept in
+    finance).

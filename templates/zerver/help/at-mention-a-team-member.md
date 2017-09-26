@@ -9,13 +9,17 @@ they may have already read the message.
 
 !!! tip ""
     You can view any messages calling your attention by clicking on the
-    **@-mentions** filters in the left sidebar.
+    **Mentions** filters in the left sidebar.
 
 1. Compose a [new message or reply](/help/reply-to-a-message).
 2. In the **Compose your message here...** field, type `@` followed by the
 email address or part of the username of the user you want to @-mention.
 When you begin typing an email address or username, autocomplete suggestions
 will appear.
+
+    !!! tip ""
+        You can type `@**all**` to mention everyone subscribed to the stream you
+        send the message to.
 
     ![Mention](/static/images/help/mention-screenshot.png)
 

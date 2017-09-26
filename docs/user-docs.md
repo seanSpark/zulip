@@ -8,11 +8,11 @@ maintaining such documentation highly efficient.
 ## Editing and testing
 
 The user documentation is available under `/help/` on any Zulip server;
-(e.g. [https://chat.zulip.org/help/](https://chat.zulip.org/help/) or
-`http://localhost:9991/help/` in the Zulip development environment). The
-user documentation is not hosted on ReadTheDocs, since Zulip supports
-running a server completely disconnected from the Internet, and we'd like
-the documentation to be available in that environment.
+(e.g. <https://chat.zulip.org/help/> or `http://localhost:9991/help/` in
+the Zulip development environment). The user documentation is not hosted on
+ReadTheDocs, since Zulip supports running a server completely disconnected
+from the Internet, and we'd like the documentation to be available in that
+environment.
 
  The source for this user documentation is the Markdown files under
 `templates/zerver/help/` in the
@@ -54,7 +54,7 @@ documentation. Your title should be formatted as a heading by prepending
 your title with a `#`.
 
 The title of your documentation needs to be included under a fitting section
-in `templates/zerver/help/index.md` so users can access it from the user
+in `templates/zerver/help/sidebar.md` so users can access it from the user
 documentation index.
 
 ### Introduction
@@ -177,43 +177,46 @@ a new line to be formatted this way.
 
 ### Icons
 
-You can refer to features in the Zulip UI by refrencing their names and
-their [FontAwesome](http://fontawesome.io) (version 3.0.2) text icons within
+You can refer to features in the Zulip UI by referencing their names and
+their [FontAwesome](http://fontawesome.io) (version 4.7.0) text icons within
 parentheses. The source for the text icons is located in
-`static/styles/thirdparty-fonts.css`.
+`static/third/thirdparty-fonts.css`. **Note:** It is strongly recommended to use
+the new base class `fa` instead of the older base class `icon-vector` when
+specifying icons. In future we will be removing support for the icons with base
+class `icon-vector`.
 
 * cog (<i class="fa fa-cog"></i>) icon — `cog (<i
-class="icon-vector-cog"></i>) icon`
+class="fa fa-cog"></i>) icon`
 * down chevron (<i class="fa fa-chevron-down"></i>) icon —
-`down chevron (<i class="icon-vector-chevron-down"></i>) icon`
+`down chevron (<i class="fa fa-chevron-down"></i>) icon`
 * eye (<i class="fa fa-eye"></i>) icon — `eye (<i
-class="icon-vector-eye-open"></i>) icon`
+class="fa fa-eye"></i>) icon`
 * file (<i class="fa fa-file-text-o"></i>) icon — `file (<i
-class="icon-vector-file-text-alt"></i>) icon`
+class="fa fa-file-text-o"></i>) icon`
 * filled star (<i class="fa fa-star"></i>) icon —
-`filled star (<i class="icon-vector-star"></i>) icon`
+`filled star (<i class="fa fa-star"></i>) icon`
 * formatting (<i class="fa fa-font"></i>) icon —
-`formatting (<i class="icon-vector-font"></i>) icon`
+`formatting (<i class="fa fa-font"></i>) icon`
 * menu (<i class="fa fa-bars"></i>) icon — `menu (<i
-class="icon-vector-reorder"></i>) icon`
+class="fa fa-bars"></i>) icon`
 * overflow ( <i class="fa fa-ellipsis-v"></i> ) icon —
-`overflow ( <i class="icon-vector-ellipsis-verical"></i> ) icon`
+`overflow ( <i class="fa fa-ellipsis-v"></i> ) icon`
 * paperclip (<i class="fa fa-paperclip"></i>) icon —
-`paperclip (<i class="icon-vector-paperclip"></i>) icon`
+`paperclip (<i class="fa fa-paperclip"></i>) icon`
 * pencil (<i class="fa fa-pencil"></i>) icon —
-`pencil (<i class="icon-vector-pencil"></i>) icon`
+`pencil (<i class="fa fa-pencil"></i>) icon`
 * pencil and paper (<i class="fa fa-pencil-square-o"></i>) icon —
-`pencil and paper (<i class="icon-vector-edit"></i>) icon`
+`pencil and paper (<i class="fa fa-pencil-square-o"></i>) icon`
 * plus (<i class="fa fa-plus"></i>) icon —
-`plus (<i class="icon-vector-plus"></i>) icon`
+`plus (<i class="fa fa-plus"></i>) icon`
 * smiley face (<i class="fa fa-smile-o"></i>) icon —
-`smiley face (<i class="icon-vector-smile"></i>) icon`
+`smiley face (<i class="fa fa-smile-o"></i>) icon`
 * star (<i class="fa fa-star-o"></i>) icon —
-`star (<i class="icon-vector-star-empty"></i>) icon`
+`star (<i class="fa fa-star-o"></i>) icon`
 * trash (<i class="fa fa-trash-o"></i>) icon —
-`trash (<i class="icon-vector-trash"></i>) icon`
+`trash (<i class="fa fa-trash-o"></i>) icon`
 * x (<i class="fa fa-times"></i>) icon —
-`x (<i class="icon-vector-remove"></i>) icon`
+`x (<i class="fa fa-times"></i>) icon`
 
 ### Macros
 
@@ -227,25 +230,25 @@ The source for macros is the Markdown files under
 multiple instances of particular content in the documentation, you can
 always create a new macro by adding a new file to that folder.
 
-### **Administration** `{!admin.md!}` macro
+### **Organization settings** `{!admin.md!}` macro
 
-* **About:** Links to the **Edit Administrator Settings** documentation.
+* **About:** Links to the **Organization settings** documentation.
 Usually preceded by the [**Go to the** macro](#go-to-the-go-to-the-md-macro)
-and a link to a particular section on the **Administration** page.
+and a link to a particular section on the **Organization settings** page.
 
 * **Contents:**
-    ```.md
-    tab of the [Administration](/help/edit-administrator-settings) page.
+    ```md
+    tab of the [Organization settings](/help/edit-administrator-settings) page.
     ```
 
 * **Example usage and rendering:**
-    ```.md
-    {!go-to-the.md!} [Organization settings](/#administration/organization-settings)
+    ```md
+    {!go-to-the.md!} [Organization settings](/#organization/organization-settings)
     {!admin.md!}
     ```
-    ```.md
-    1. Go to the [Organization settings](/#administration/organization-settings) tab of the
-    [Administration](/help/edit-administrator-settings) page.
+    ```md
+    1. Go to the [Organization settings](/#organization/organization-settings) tab of the
+    [Organization](/help/edit-administrator-settings) page.
     ```
 
 ### **Administrator only feature** `{!admin-only.md!}` macro
@@ -255,19 +258,19 @@ only available to organization administrators. It should be placed
 immediately after the title.
 
 * **Contents:**
-    ```.md
+    ```md
     !!! warn ""
         **Note:** This feature can only be controlled by organization administrators.
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!admin-only.md!}
 
     {!follow-steps.md!} change who can join your stream by changing the stream's
     accessibility.
     ```
-    ```.md
+    ```md
     !!! warn ""
         **Note:** This feature can only be controlled by organization administrators.
 
@@ -283,20 +286,20 @@ immediately after the title.
 [**Filter streams** macro](#filter-streams-filter-streams-md-macro).
 
 * **Contents:**
-    ```.md
+    ```md
         If you wish to see streams that you aren't subscribed to, click on the
             **All streams** tab; the tab will turn gray upon doing so.
     ```
 
 * **Example usage and rendering:**
 
-    ```.md
+    ```md
     {!subscriptions.md!}
     {!filter-streams.md!}
         !!! tip ""
         {!all-streams.md!}
     ```
-    ```.md
+    ```md
     1. [Find the relevant stream](/help/browse-and-join-streams#browse-streams) on the
     [Streams](/#streams) page. You can search for specific streams by entering the
     name of the stream in the **Filter streams** input.
@@ -313,38 +316,38 @@ an command, such as the [**Message actions**
 macro](#message-actions-message-actions-md-macro).
 
 * **Contents:**
-    ```.md
-    down chevron (<i class="icon-vector-chevron-down"></i>) icon to reveal an actions dropdown.
+    ```md
+    down chevron (<i class="fa fa-chevron-down"></i>) icon to reveal an actions dropdown.
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!message-actions.md!}
     {!down-chevron.md!}
     ```
-    ```.md
+    ```md
     1. Hover over a message to replace the message's timestamp with its message
     actions, represented by three icons. From the icons that appear, select the
-    down chevron (<i class="icon-vector-chevron-down"></i>) icon to reveal an actions dropdown.
+    down chevron (<i class="fa fa-chevron-down"></i>) icon to reveal an actions dropdown.
     ```
 
 ### **Go to the** `{!go-to-the.md}` macro
 
 * **About:** Usually precedes the [**Settings** macro](#settings-settings-md-macro)
-or the [**Administration** macro](#administration-admin-md-macro). Transforms
+or the [**Organization settings** macro](#organization-settings-admin-md-macro). Transforms
 following content into a step.
 
 * **Contents:**
-    ```.md
+    ```md
     1. Go to the
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!go-to-the.md!} [Notifications](/#settings/notifications)
     {!settings.md!}
     ```
-    ```.md
+    ```md
     1. Go to the [Notifications](/#settings/notifications) tab on the
     [Settings](/help/edit-settings) page.
     ```
@@ -356,17 +359,17 @@ following content into a step.
   the [**Streams** macro](#streams-subscriptions-md-macro).
 
 * **Contents:**
-    ```.md
+    ```md
     You can search for specific streams by entering the name of the stream in
     the **Filter streams** input.
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!subscriptions.md!}
     {!filter-streams.md!}
     ```
-    ```.md
+    ```md
     1. [Find the relevant stream](/help/browse-and-join-streams#browse-streams) on the
     [Streams](/#streams) page. You can search for specific streams by entering the
     name of the stream in the **Filter streams** input.
@@ -377,15 +380,15 @@ following content into a step.
 * **About:** Prepends phrases with instructions to follow the following steps.
 
 * **Contents:**
-    ```.md
+    ```md
     Follow the following steps to
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!follow-steps.md!}  change your mobile notification settings.
     ```
-    ```.md
+    ```md
     Follow the following steps to change your mobile notification
     settings.
     ```
@@ -396,20 +399,20 @@ following content into a step.
 to click a specific icon, such as the [**Down chevron** macro](#down-chevron-down-chevron-md-macro).
 
 * **Contents:**
-    ```.md
+    ```md
     1. Hover over a message to replace the message's timestamp with its message
     actions, represented by three icons. From the icons that appear, select the
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!message-actions.md!}
     {!down-chevron.md!}
     ```
-    ```.md
+    ```md
     1. Hover over a message to replace the message's timestamp with its message
     actions, represented by three icons. From the icons that appear, select the
-    down chevron (<i class="icon-vector-chevron-down"></i>) icon to reveal an actions dropdown.
+    down chevron (<i class="fa fa-chevron-down"></i>) icon to reveal an actions dropdown.
     ```
 
 ### **Save changes** `{!save-changes.md!}` macro
@@ -419,16 +422,16 @@ by pressing the **Save changes** button. Usually followed by a phrase
 describing the settings they modified.
 
 * **Contents:**
-    ```.md
+    ```md
     1. Click on the **Save changes** button to save any changes you made to
     your
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!save-changes.md!} notification settings.
     ```
-    ```.md
+    ```md
     1. Click on the **Save changes** button to save any changes you made to
     your notification settings.
     ```
@@ -440,16 +443,16 @@ the [**Go to the** macro](#go-to-the-go-to-the-md-macro) and a link to a
 particular section on the **Settings** page.
 
 * **Contents:**
-    ```.md
+    ```md
     tab on the [Settings](/help/edit-settings) page.
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!go-to-the.md!} [Notifications](/#settings/notifications)
     {!settings.md!}
     ```
-    ```.md
+    ```md
     1. Go to the [Notifications](/#settings/notifications) tab on the
     [Settings](/help/edit-settings) page.
     ```
@@ -460,25 +463,25 @@ particular section on the **Settings** page.
 instruction and the [**Down chevron** macro](#down-chevron-down-chevron-md-macro).
 
 * **Contents:**
-    ```.md
+    ```md
     1. On the left sidebar in the **Streams** section, hover over a stream to reveal
-    a down chevron (<i class="icon-vector-chevron-down"></i>) icon to the right of
+    a down chevron (<i class="fa fa-chevron-down"></i>) icon to the right of
     the stream name.
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!stream-actions.md!}
 
     1. Click on the {!down-chevron.md!}
     ```
 
-    ```.md
+    ```md
     1. On the left sidebar in the **Streams** section, hover over a stream to reveal
-    a down chevron (<i class="icon-vector-chevron-down"></i>) icon to the right of
+    a down chevron (<i class="fa fa-chevron-down"></i>) icon to the right of
     the stream name.
 
-    2. Click on the down chevron (<i class="icon-vector-chevron-down"></i>)
+    2. Click on the down chevron (<i class="fa fa-chevron-down"></i>)
     icon to reveal an actions dropdown.
     ```
 
@@ -489,16 +492,16 @@ instruction and the [**Down chevron** macro](#down-chevron-down-chevron-md-macro
   by an instruction.
 
 * **Contents:**
-    ```.md
+    ```md
     the right side of the [Streams](/#streams) page, labeled
     **Stream settings**, will now display the selected stream's settings.
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     1. Click on the stream you want to edit; {!stream-settings.md!}
     ```
-    ```.md
+    ```md
     1. Click on the stream you want to edit; the right side of the
     [Streams](/#streams) page, labeled **Stream settings**, will
     now display the selected stream's settings.
@@ -511,18 +514,18 @@ instruction and the [**Down chevron** macro](#down-chevron-down-chevron-md-macro
 **Streams Settings** section.
 
 * **Contents:**
-    ```.md
+    ```md
     1. After making sure that your cursor is hovering over the **Streams Settings**
     section, scroll down to the
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!stream-settings-scroll.md!} **Stream membership** section. This section
     shows the usernames and emails of all users that are currently subscribed to the
     selected stream.
     ```
-    ```.md
+    ```md
     1. After making sure that your cursor is hovering over the **Streams Settings**
     section, scroll down to the **Stream membership** section. This section
     shows the usernames and emails of all users that are currently subscribed to the
@@ -535,17 +538,17 @@ instruction and the [**Down chevron** macro](#down-chevron-down-chevron-md-macro
 Often followed by the [**Filter streams** macro](#filter-streams-filter-streams-md-macro).
 
 * **Contents:**
-    ```.md
+    ```md
     1. [Find the relevant stream](/help/browse-and-join-streams#browse-streams) on
     the [Streams](/#streams) page.
     ```
 
 * **Example usage and rendering:**
-    ```.md
+    ```md
     {!subscriptions.md!}
     {!filter-streams.md!}
     ```
-    ```.md
+    ```md
     1. [Find the relevant stream](/help/browse-and-join-streams#browse-streams) on the
     [Streams](/#streams) page. You can search for specific streams by entering the
     name of the stream in the **Filter streams** input.
@@ -604,7 +607,7 @@ replace this paragraph with an appropriate description of the documentation.
 2. This is the second step of the documentation.
 
     Here's an additional note about the second step. Click on the star (<i
-    class="icon-vector-star-empty"></i>) icon to learn more about it.
+    class="fa fa-star-half-o"></i>) icon to learn more about it.
 
 3. This is the third step of the documentation.
 

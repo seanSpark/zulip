@@ -1,22 +1,20 @@
-global.stub_out_jquery();
-
 set_global('page_params', {
     is_admin: false,
-    people_list: [],
+    realm_users: [],
 });
 
-add_dependencies({
-    people: 'js/people.js',
-    stream_color: 'js/stream_color.js',
-    narrow: 'js/narrow.js',
-    hashchange: 'js/hashchange.js',
-    util: 'js/util.js',
+set_global('$', function () {
 });
 
 set_global('blueslip', {});
 
-var stream_data = require('js/stream_data.js');
-var people = global.people;
+zrequire('util');
+zrequire('hash_util');
+zrequire('narrow');
+zrequire('topic_data');
+zrequire('people');
+zrequire('stream_color');
+zrequire('stream_data');
 
 (function test_basics() {
     var denmark = {
@@ -68,11 +66,15 @@ var people = global.people;
     assert.equal(stream_data.get_name('denMARK'), 'Denmark');
     assert.equal(stream_data.get_name('unknown Stream'), 'unknown Stream');
 
-    assert(stream_data.in_home_view('social'));
-    assert(!stream_data.in_home_view('denmark'));
+    assert(stream_data.in_home_view(social.stream_id));
+    assert(!stream_data.in_home_view(denmark.stream_id));
+
+    assert.equal(stream_data.maybe_get_stream_name(), undefined);
+    assert.equal(stream_data.maybe_get_stream_name(social.stream_id), 'social');
+    assert.equal(stream_data.maybe_get_stream_name(42), undefined);
 }());
 
-(function test_get_by_id() {
+(function test_renames() {
     stream_data.clear_subscriptions();
     var id = 42;
     var sub = {
@@ -91,6 +93,15 @@ var people = global.people;
     sub = stream_data.get_sub_by_id(id);
     assert.equal(sub.color, 'red');
     assert.equal(sub.name, 'Sweden');
+
+    sub = stream_data.get_sub('Denmark');
+    assert.equal(sub, undefined);
+
+    sub = stream_data.get_sub_by_name('Denmark');
+    assert.equal(sub.name, 'Sweden');
+
+    var actual_id = stream_data.get_stream_id('Denmark');
+    assert.equal(actual_id, 42);
 }());
 
 (function test_unsubscribe() {
@@ -228,77 +239,38 @@ var people = global.people;
     assert(!ok);
 }());
 
-(function test_process_message_for_recent_topics() {
-    var message = {
-        stream: 'Rome',
-        timestamp: 101,
-        subject: 'toPic1',
+(function test_is_active() {
+    stream_data.clear_subscriptions();
+
+    var sub = {name: 'pets', subscribed: false, stream_id: 1};
+    stream_data.add_sub('pets', sub);
+
+    assert(!stream_data.is_active(sub));
+
+    stream_data.subscribe_myself(sub);
+    assert(stream_data.is_active(sub));
+
+    stream_data.unsubscribe_myself(sub);
+    assert(!stream_data.is_active(sub));
+
+    sub = {name: 'lunch', subscribed: false, stream_id: 222};
+    stream_data.add_sub('lunch', sub);
+
+    assert(!stream_data.is_active(sub));
+
+    var opts = {
+        stream_id: 222,
+        message_id: 108,
+        topic_name: 'topic2',
     };
-    stream_data.process_message_for_recent_topics(message);
+    topic_data.add_message(opts);
 
-    var history = stream_data.get_recent_topics('Rome');
-    assert.deepEqual(history, [
-        {
-            subject: 'toPic1',
-            canon_subject: 'topic1',
-            count: 1,
-            timestamp: 101,
-        },
-    ]);
-
-    message = {
-        stream: 'Rome',
-        timestamp: 102,
-        subject: 'Topic1',
-    };
-    stream_data.process_message_for_recent_topics(message);
-    history = stream_data.get_recent_topics('Rome');
-    assert.deepEqual(history, [
-        {
-            subject: 'Topic1',
-            canon_subject: 'topic1',
-            count: 2,
-            timestamp: 102,
-        },
-    ]);
-
-    message = {
-        stream: 'Rome',
-        timestamp: 103,
-        subject: 'topic2',
-    };
-    stream_data.process_message_for_recent_topics(message);
-    history = stream_data.get_recent_topics('Rome');
-    assert.deepEqual(history, [
-        {
-            subject: 'topic2',
-            canon_subject: 'topic2',
-            count: 1,
-            timestamp: 103,
-        },
-        {
-            subject: 'Topic1',
-            canon_subject: 'topic1',
-            count: 2,
-            timestamp: 102,
-        },
-    ]);
-
-    stream_data.process_message_for_recent_topics(message, true);
-    history = stream_data.get_recent_topics('Rome');
-    assert.deepEqual(history, [
-        {
-            subject: 'Topic1',
-            canon_subject: 'topic1',
-            count: 2,
-            timestamp: 102,
-        },
-    ]);
+    assert(stream_data.is_active(sub));
 }());
 
 (function test_admin_options() {
     function make_sub() {
-        return {
+        var sub = {
             subscribed: false,
             color: 'blue',
             name: 'stream_to_admin',
@@ -306,12 +278,14 @@ var people = global.people;
             in_home_view: false,
             invite_only: false,
         };
+        stream_data.add_sub(sub.name, sub);
+        return sub;
     }
 
     // non-admins can't do anything
     global.page_params.is_admin = false;
     var sub = make_sub();
-    stream_data.add_admin_options(sub);
+    stream_data.update_calculated_fields(sub);
     assert(!sub.is_admin);
     assert(!sub.can_make_public);
     assert(!sub.can_make_private);
@@ -324,7 +298,7 @@ var people = global.people;
 
     // admins can make public streams become private
     sub = make_sub();
-    stream_data.add_admin_options(sub);
+    stream_data.update_calculated_fields(sub);
     assert(sub.is_admin);
     assert(!sub.can_make_public);
     assert(sub.can_make_private);
@@ -334,7 +308,7 @@ var people = global.people;
     sub = make_sub();
     sub.invite_only = true;
     sub.subscribed = false;
-    stream_data.add_admin_options(sub);
+    stream_data.update_calculated_fields(sub);
     assert(sub.is_admin);
     assert(!sub.can_make_public);
     assert(!sub.can_make_private);
@@ -342,7 +316,7 @@ var people = global.people;
     sub = make_sub();
     sub.invite_only = true;
     sub.subscribed = true;
-    stream_data.add_admin_options(sub);
+    stream_data.update_calculated_fields(sub);
     assert(sub.is_admin);
     assert(sub.can_make_public);
     assert(!sub.can_make_private);
@@ -354,6 +328,7 @@ var people = global.people;
         name: 'c',
         color: 'cinnamon',
         subscribed: true,
+        invite_only: false,
     };
 
     var blue = {
@@ -361,6 +336,7 @@ var people = global.people;
         name: 'b',
         color: 'blue',
         subscribed: false,
+        invite_only: false,
     };
 
     var amber = {
@@ -368,6 +344,7 @@ var people = global.people;
         name: 'a',
         color: 'amber',
         subscribed: true,
+        invite_only: true,
     };
     stream_data.clear_subscriptions();
     stream_data.add_sub(cinnamon.name, cinnamon);
@@ -379,6 +356,44 @@ var people = global.people;
     assert.equal(sub_rows[1].color, 'amber');
     assert.equal(sub_rows[2].color, 'cinnamon');
 
+    sub_rows = stream_data.get_streams_for_admin();
+    assert.equal(sub_rows[0].name, 'a');
+    assert.equal(sub_rows[1].name, 'b');
+    assert.equal(sub_rows[2].name, 'c');
+    assert.equal(sub_rows[0].invite_only, true);
+    assert.equal(sub_rows[1].invite_only, false);
+    assert.equal(sub_rows[2].invite_only, false);
+
+}());
+
+(function test_get_non_default_stream_names() {
+    var announce = {
+        stream_id: 101,
+        name: 'announce',
+        subscribed: true,
+    };
+
+    var public_stream = {
+        stream_id: 102,
+        name: 'public',
+        subscribed: true,
+    };
+
+    var private_stream = {
+        stream_id: 103,
+        name: 'private',
+        subscribed: true,
+        invite_only: true,
+    };
+
+    stream_data.clear_subscriptions();
+    stream_data.set_realm_default_streams([announce]);
+    stream_data.add_sub('announce', announce);
+    stream_data.add_sub('public_stream', public_stream);
+    stream_data.add_sub('private_stream', private_stream);
+
+    var names = stream_data.get_non_default_stream_names();
+    assert.deepEqual(names, ['public']);
 }());
 
 (function test_delete_sub() {
@@ -399,4 +414,33 @@ var people = global.people;
     assert(!stream_data.is_subscribed('Canada'));
     assert(!stream_data.get_sub('Canada'));
     assert(!stream_data.get_sub_by_id(canada.stream_id));
+}());
+
+(function test_get_subscriber_count() {
+    var india = {
+        stream_id: 102,
+        name: 'India',
+        subscribed: true,
+    };
+    stream_data.clear_subscriptions();
+    assert.equal(stream_data.get_subscriber_count('India'), undefined);
+    stream_data.add_sub('India', india);
+    assert.equal(stream_data.get_subscriber_count('India'), 0);
+
+    var fred = {
+        email: 'fred@zulip.com',
+        full_name: 'Fred',
+        user_id: 101,
+    };
+    people.add(fred);
+    stream_data.add_subscriber('India', 102);
+    assert.equal(stream_data.get_subscriber_count('India'), 1);
+    var george = {
+        email: 'george@zulip.com',
+        full_name: 'George',
+        user_id: 103,
+    };
+    people.add(george);
+    stream_data.add_subscriber('India', 103);
+    assert.equal(stream_data.get_subscriber_count('India'), 2);
 }());

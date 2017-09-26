@@ -1,98 +1,97 @@
 # Customize Zulip
 
 Once you've got Zulip setup, you'll likely want to configure it the
-way you like.  There are four big things to focus on:
+way you like.
 
-1. [Integrations](#integrations)
-2. [Streams and Topics](#streams-and-topics)
-3. [Notification settings](#notification-settings)
-4. [Mobile and desktop apps](#mobile-and-desktop-apps)
+## Making changes
 
-Lastly, read about Zulip's other [great features](#all-other-features), and
-then [enjoy your Zulip installation](#enjoy-your-zulip-installation)!
+Most configuration can be done by a realm administrator, on the web.
+For those settings, see [the documentation for realm
+administrators][realm-admin-docs].
 
-## Integrations
+[realm-admin-docs]: https://zulipchat.com/help/getting-your-organization-started-with-zulip
 
-We recommend setting up integrations for the major
-tools that your team works with.  For example, if you're a software
-development team, you may want to start with integrations for your
-version control, issue tracker, CI system, and monitoring tools.
+This page discusses additional configuration that a system
+administrator can do.  To change any of the following settings, edit
+the `/etc/zulip/settings.py` file on your Zulip server, and then
+restart the server with the following command:
+```
+su zulip -c /home/zulip/deployments/current/scripts/restart-server
+```
 
-Spend time configuring these integrations to be how you like them --
-if an integration is spammy, you may want to change it to not send
-messages that nobody cares about (e.g., for the Trac integration, some
-teams find they only want notifications when new tickets are opened,
-commented on, or closed, and not every time someone edits the
-metadata).
+## Specific settings
 
-If Zulip doesn't have an integration you want, you can add your own!
-Most integrations are very easy to write, and even more complex
-integrations usually take less than a day's work to build.  We very
-much appreciate contributions of new integrations; see the brief
-[integration writing guide](integration-guide.html).
+### Authentication Backends
 
+`AUTHENTICATION_BACKENDS` is a list of enabled authentication mechanisms. By
+default the email backend is enabled.
 
-It can often be valuable to integrate your own internal processes to
-send notifications into Zulip; e.g. notifications of new customer
-signups, new error reports, or daily reports on the team's key
-metrics; this can often spawn discussions in response to the data.
+If you want an additional or different authentication backend, you will need to
+uncomment one or more and then do any additional configuration required for
+that backend as documented in the `settings.py` file. See
+the [section on Authentication](prod-authentication-methods.html) for more detail on the available
+authentication backends and how to configure them.
 
-## Streams and Topics
+### Mobile and desktop apps
 
-If it feels like a stream has too much
-traffic about a topic only of interest to some of the subscribers,
-consider adding or renaming streams until you feel like your team is
-working productively.
+The Zulip apps expect to be talking to to servers with a properly
+signed SSL certificate, in most cases and will not accept a
+self-signed certificate.  You should get a proper SSL certificate
+before testing the apps.
 
-Second, most users are not used to topics.  It can require a bit of
-time for everyone to get used to topics and start benefitting from
-them, but usually once a team is using them well, everyone ends up
-enthusiastic about how much topics make life easier.  Some tips on
-using topics:
+Because of how Google and Apple have architected the security model of
+their push notification protocols, the Zulip mobile apps for
+[iOS](https://itunes.apple.com/us/app/zulip/id1203036395) and
+[Android](https://play.google.com/store/apps/details?id=com.zulip.android)
+can only receive push notifications from a single Zulip server.  We
+have configured that server to be `push.zulipchat.com`, and offer a
+[push notification forwarding service](prod-mobile-push-notifications.html) that
+forwards push notifications through our servers to mobile devices.
+Read the linked documentation for instructions on how to register for
+and configure this service.
 
-* When replying to an existing conversation thread, just click on the
-  message, or navigate to it with the arrow keys and hit "r" or
-  "enter" to reply on the same topic
-* When you start a new conversation topic, even if it's related to the
-  previous conversation, type a new topic in the compose box
-* You can edit topics to fix a thread that's already been started,
-  which can be helpful when onboarding new batches of users to the platform.
+By the end of summer 2017, all of the Zulip apps will have full
+support for multiple accounts, potentially on different Zulip servers,
+with a convenient UI for switching between them.
 
-Third, setting default streams for new users is a great way to get new
-users involved in conversations before they've accustomed themselves
-with joining streams on their own.  You can do so on the
-`/administration` page (get there from the gear menu).
+### Terms of Service and Privacy policy
 
-## Notification settings
+Zulip allows you to configure your server's Terms of Service and
+Privacy Policy pages (`/terms` and `/privacy`, respectively).  You can
+use the `TERMS_OF_SERVICE` and `PRIVACY_POLICY` settings to configure
+the path to your server's policies.  The syntax is Markdown (with
+support for included HTML).  A good approach is to use paths like
+`/etc/zulip/terms.md`, so that it's easy to back up your policy
+configuration along with your other Zulip server configuration.
 
-Zulip gives you a great deal of control
-over which messages trigger desktop notifications; you can configure
-these extensively in the `/#settings` page (get there from the gear
-menu).
+### Miscellaneous server settings
 
-## Mobile and desktop apps
+Zulip has dozens of settings documented in the comments in
+`/etc/zulip/settings.py`; you can review
+[the latest version of the settings.py template][settings-py-template]
+if you've deleted the comments or want to check if new settings have
+been added in more recent versions of Zulip.
 
-Currently, the Zulip Desktop app
-only supports talking to servers with a properly signed SSL
-certificate, so you may find that you get a blank screen when you
-connect to a Zulip server using a self-signed certificate.
+Since Zulip's settings file is a Python script, there are a number of
+other things that one can configure that are not documented; ask on
+[chat.zulip.org](https://zulip.readthedocs.io/en/latest/chat-zulip-org.html)
+if there's something you'd like to do but can't figure out how to.
 
-The iOS app currently available in the App Store doesn't support
-Google auth SSO against non-zulip.com servers; there's a design for
-how to fix that which wouldn't be a ton of work to implement.  If you
-are interested in helping out with the Zulip mobile apps, shoot an
-email to zulip-devel@googlegroups.com and the maintainers can guide
-you on how to help.
+[settings-py-template]: https://github.com/zulip/zulip/blob/master/zproject/prod_settings_template.py
 
-For announcements about improvements to the apps, make sure to join
-the zulip-announce@googlegroups.com list so that you can receive the
-announcements when these become available.
+Some popular settings in `/etc/zulip/settings.py` include:
+* The Twitter integration, which provides pretty inline previews of
+  tweets.
+* The email gateway, which lets users send emails into Zulip.
+* `INLINE_URL_EMBED_PREVIEW`, which controls our experimental feature
+  providing inline previews of links pasted into Zulip.
 
-## All other features
+## Zulip announcement list
 
-Hotkeys, emoji, search filters, @-mentions, etc.  Zulip has lots of
-great features; make sure your team knows they exist and how to use
-them effectively.
+If you haven't already, subscribe to the
+[zulip-announce](https://groups.google.com/forum/#!forum/zulip-announce)
+list so that you can receive important announces like new Zulip
+releases or major changes to the app ecosystem..
 
 ## Enjoy your Zulip installation!
 

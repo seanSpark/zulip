@@ -2,17 +2,15 @@
 set -eux
 
 usage() {
-    echo "Usage: $0 [--py3] <ZULIP_VERSION>" >&2
+    echo "Usage: $0 <ZULIP_VERSION>" >&2
     exit 1
 }
 
-args="$(getopt -o '' -l 'py3' -n "$0" -- "$@")"
+args="$(getopt -o '' -l '' -n "$0" -- "$@")"
 eval "set -- $args"
 
-py3=
 while true; do
     case "$1" in
-        --py3) py3=t; shift;;
         --) shift; break;;
         *) usage;;
     esac
@@ -50,19 +48,12 @@ TARBALL=$TMPDIR/$prefix.tar
 git archive -o "$TARBALL" "--prefix=$prefix/" HEAD
 
 
-if tar -tf "$TARBALL" | grep -q -e zilencer -e zproject/local_settings.py -e puppet/zulip_internal; then
+if tar -tf "$TARBALL" | grep -q -e ^zerver/tests; then
 	echo "Excluded files remain in tarball!";
 	echo "Versions of git 1.8.1.1 - 1.8.1.6 have broken .gitattributes syntax";
 	exit 1;
 else
 	echo "Check for excluded files passed";
-fi
-
-if [ "$py3" ]; then
-    tools/replace-tarball-shebang \
-        '#!/usr/bin/env python' '#!/usr/bin/env python3' \
-        < "$TARBALL" > "$TARBALL.new"
-    mv "$TARBALL.new" "$TARBALL"
 fi
 
 # Check out a temporary full copy of the index to generate static files
@@ -99,10 +90,14 @@ set +x
 USER_PROD_STATIC_LOGPATH="${TMPDIR}/update-prod-static.log"
 BUILD_PROD_STATIC_LOGPATH="${TMP_CHECKOUT}/var/log/update-prod-static.log"
 ln -nfs "$BUILD_PROD_STATIC_LOGPATH" "$USER_PROD_STATIC_LOGPATH"
-echo; echo -e "\033[33mRunning update-prod-static; check ${TMPDIR}/update-prod-static.log if it fails\033[0m"; echo
 set -x
 
-./tools/update-prod-static
+./tools/update-prod-static || (
+    set +x
+    echo; echo -ne "\033[33mRunning update-prod-static failed. "
+    echo -e "Check ${TMPDIR}/update-prod-static.log for more information.\033[0m"
+    exit 1
+)
 echo "$GITID" > build_id
 echo "$version" > version
 rm -f "$USER_PROD_STATIC_LOGPATH"
@@ -115,7 +110,7 @@ find prod-static/serve/generated/emoji/images/emoji/ -regex '.*\.[0-9a-f]+\.png'
 
 cd "$TMPDIR"
 
-tar --append -f "$TARBALL" "$prefix/prod-static" "$prefix/build_id" "$prefix/version" "$prefix/staticfiles.json"
+tar --append -f "$TARBALL" "$prefix/prod-static" "$prefix/build_id" "$prefix/version" "$prefix/staticfiles.json" "$prefix/webpack-stats-production.json"
 
 rm -rf "$prefix"
 

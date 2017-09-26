@@ -13,7 +13,7 @@
 
 .informational-overlays .overlay-tabs {
     padding: 10px 0px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid hsl(0, 0%, 93%);
 }
 
 .informational-overlays .overlay-tabs .tab-switcher {
@@ -23,7 +23,7 @@
 .informational-overlays .overlay-tabs .exit {
     float: right;
     font-size: 1.5rem;
-    color: #aaa;
+    color: hsl(0, 0%, 66%);
     font-weight: 600;
     margin: 1px 15px;
 }
@@ -35,6 +35,7 @@
 .informational-overlays .overlay-modal .modal-body {
     height: 70vh;
     text-align: center;
+    outline: none;
 }
 
 .informational-overlays .overlay-modal .modal-header h3 {
@@ -47,4 +48,28 @@
 
 .informational-overlays td.operator {
     font-size: 0.9em;
+}
+
+@media only screen and (max-width: 768px) {
+    .informational-overlays .overlay-content {
+        width: calc(100% - 20px);
+    }
+
+    .informational-overlays .tab-switcher.large .ind-tab {
+        width: 100%;
+    }
+
+    .informational-overlays .tab-switcher {
+        display: flex;
+    }
+
+    .informational-overlays .table.table-condensed.table-striped {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .informational-overlays .hotkeys_table {
+        width: 100%;
+        display: table;
+    }
 }

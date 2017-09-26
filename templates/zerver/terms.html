@@ -1,14 +1,19 @@
 {% extends "zerver/portico.html" %}
 
-{# Terms of service. #}
+{# Terms of Service. #}
 
 {% block portico_content %}
 
-<div class="app terms-page">
-    <div class="app-main terms-page-container">
-
+<div class="app terms-page flex">
+    <div class="app-main terms-page-container white-box">
         {% if terms_of_service %}
-        {{ terms_of_service|render_markdown_path }}
+            {{ render_markdown_path(terms_of_service) }}
+        {% else %}
+            {% trans %}
+            This installation of Zulip does not have a configured terms of service.
+            Contact this <a href="mailto:{{ support_email }}">server's administrator</a>
+            if you have any questions.
+            {% endtrans %}
         {% endif %}
     </div>
 </div>

@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.utils import timezone
+from django.utils.timezone import now as timezone_now
 from zerver.models import UserProfile
 
 import argparse
@@ -28,7 +28,7 @@ class Command(BaseCommand):
         parser.add_argument('--optin-time',
                             dest='optin_time',
                             type=str,
-                            default=datetime.isoformat(timezone.now().replace(microsecond=0)),
+                            default=datetime.isoformat(timezone_now().replace(microsecond=0)),
                             help='Opt-in time of the users.')
 
     def handle(self, *args, **options):
@@ -59,8 +59,7 @@ class Command(BaseCommand):
                    (options['api_key'].split('-')[1], options['list_id'])
 
         for user in UserProfile.objects.filter(is_bot=False, is_active=True) \
-                                       .values('email', 'full_name', 'realm_id') \
-                                       .filter(full_name='Zoe'):
+                                       .values('email', 'full_name', 'realm_id'):
             data = {
                 'email_address': user['email'],
                 'list_id': options['list_id'],

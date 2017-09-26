@@ -157,12 +157,19 @@ exports.MessageList.prototype = {
                 previously_selected: this._selected_id,
             });
 
-        id = parseFloat(id);
-        if (isNaN(id)) {
-            blueslip.fatal("Bad message id");
+        function convert_id(str_id) {
+            var id = parseFloat(str_id);
+            if (isNaN(id)) {
+                blueslip.fatal("Bad message id " + str_id);
+            }
+            return id;
         }
 
+        id = convert_id(id);
+
         var closest_id = this.closest_id(id);
+
+        var error_data;
 
         // The name "use_closest" option is a bit legacy.  We
         // are always gonna move to the closest visible id; the flag
@@ -171,12 +178,17 @@ exports.MessageList.prototype = {
         // pointer as needed, so only generate an error if the flag is
         // false.
         if (!opts.use_closest && closest_id !== id) {
+            error_data = {
+                table_name: this.table_name,
+                id: id,
+                closest_id: closest_id,
+            };
             blueslip.error("Selected message id not in MessageList",
-                           {table_name: this.table_name, id: id});
+                           error_data);
         }
 
         if (closest_id === -1 && !opts.empty_ok) {
-            var error_data = {
+            error_data = {
                 table_name: this.table_name,
                 id: id,
                 items_length: this._items.length,
@@ -276,7 +288,14 @@ exports.MessageList.prototype = {
                 if (potential_idx < 0) {
                     return;
                 }
-                var potential_match = items[potential_idx].id;
+                var item = items[potential_idx];
+
+                if (item === undefined) {
+                    blueslip.warn('Invalid potential_idx: ' + potential_idx);
+                    return;
+                }
+
+                var potential_match = item.id;
                 // If the potential id is the closest to the requested, save that one
                 if (Math.abs(id - potential_match) < Math.abs(best_match - id)) {
                     best_match = potential_match;
@@ -338,15 +357,18 @@ exports.MessageList.prototype = {
     },
 
     subscribed_bookend_content: function (stream_name) {
-        return "--- Subscribed to stream " + stream_name + " ---";
+        return i18n.t("You subscribed to stream __stream__",
+                      {stream: stream_name});
     },
 
     unsubscribed_bookend_content: function (stream_name) {
-        return "--- Unsubscribed from stream " + stream_name + " ---";
+        return i18n.t("You unsubscribed from stream __stream__",
+                      {stream: stream_name});
     },
 
     not_subscribed_bookend_content: function (stream_name) {
-        return "--- Not subscribed to stream " + stream_name + " ---";
+        return i18n.t("You are not subscribed to stream __stream__",
+                      {stream: stream_name});
     },
 
     // Maintains a trailing bookend element explaining any changes in
@@ -357,23 +379,33 @@ exports.MessageList.prototype = {
         if (!this.narrowed) {
             return;
         }
-        var stream = narrow.stream();
-        if (stream === undefined) {
+        var stream_name = narrow_state.stream();
+        if (stream_name === undefined) {
             return;
         }
         var trailing_bookend_content;
-        var subscribed = stream_data.is_subscribed(stream);
+        var show_button = true;
+        var subscribed = stream_data.is_subscribed(stream_name);
         if (subscribed) {
-            trailing_bookend_content = this.subscribed_bookend_content(stream);
+            trailing_bookend_content = this.subscribed_bookend_content(stream_name);
         } else {
             if (!this.last_message_historical) {
-                trailing_bookend_content = this.unsubscribed_bookend_content(stream);
+                trailing_bookend_content = this.unsubscribed_bookend_content(stream_name);
+
+                // For invite only streams or streams that no longer
+                // exist, hide the resubscribe button
+                var sub = stream_data.get_sub(stream_name);
+                if (sub !== undefined) {
+                    show_button = !sub.invite_only;
+                } else {
+                    show_button = false;
+                }
             } else {
-                trailing_bookend_content = this.not_subscribed_bookend_content(stream);
+                trailing_bookend_content = this.not_subscribed_bookend_content(stream_name);
             }
         }
         if (trailing_bookend_content !== undefined) {
-            this.view.render_trailing_bookend(trailing_bookend_content, subscribed);
+            this.view.render_trailing_bookend(trailing_bookend_content, subscribed, show_button);
         }
     },
 
@@ -469,24 +501,27 @@ exports.MessageList.prototype = {
 
     show_edit_message: function MessageList_show_edit_message(row, edit_obj) {
         row.find(".message_edit_form").empty().append(edit_obj.form);
-        row.find(".message_content").hide();
-        row.find(".message_edit").show();
+        row.find(".message_content, .status-message").hide();
+        row.find(".message_edit").css("display", "block");
         row.find(".message_edit_content").autosize();
     },
 
     hide_edit_message: function MessageList_hide_edit_message(row) {
-        row.find(".message_content").show();
+        row.find(".message_content, .status-message").show();
         row.find(".message_edit").hide();
+        row.trigger("mouseleave");
     },
 
     show_edit_topic: function MessageList_show_edit_topic(recipient_row, form) {
         recipient_row.find(".topic_edit_form").empty().append(form);
+        recipient_row.find('.icon-vector-pencil').hide();
         recipient_row.find(".stream_topic").hide();
         recipient_row.find(".topic_edit").show();
     },
 
     hide_edit_topic: function MessageList_hide_edit_topic(recipient_row) {
         recipient_row.find(".stream_topic").show();
+        recipient_row.find('.icon-vector-pencil').show();
         recipient_row.find(".topic_edit").hide();
     },
 
@@ -525,6 +560,19 @@ exports.MessageList.prototype = {
 
     all_messages: function MessageList_all_messages() {
         return this._items;
+    },
+
+    first_unread_message_id: function MessageList_first_unread_message_id() {
+        var first_unread = _.find(this._items, function (message) {
+            return unread.message_unread(message);
+        });
+
+        if (first_unread) {
+            return first_unread.id;
+        }
+
+        // if no unread, return the bottom message
+        return this.last().id;
     },
 
     // Returns messages from the given message list in the specified range, inclusive
@@ -645,18 +693,13 @@ exports.MessageList.prototype = {
         }, 0);
     },
 
-    get_last_own_editable_message: function MessageList_get_last_own_editable_message() {
+    get_last_message_sent_by_me: function () {
         var msg_index = _.findLastIndex(this._items, {sender_id: page_params.user_id});
         if (msg_index === -1) {
             return;
         }
         var msg = this._items[msg_index];
-        var msg_editability_type = message_edit.get_editability(msg, 5);
-        if (msg_editability_type !== message_edit.editability_types.NO &&
-            msg_editability_type !== message_edit.editability_types.NO_LONGER) {
-            return msg;
-        }
-        return;
+        return msg;
     },
 };
 
@@ -669,7 +712,7 @@ exports.all = new exports.MessageList(
 // doing something.  Be careful, though, if you try to capture
 // mousemove, then you will have to contend with the autoscroll
 // itself generating mousemove events.
-$(document).on('message_selected.zulip zuliphashchange.zulip mousewheel', function () {
+$(document).on('message_selected.zulip zuliphashchange.zulip wheel', function () {
     message_viewport.stop_auto_scrolling();
 });
 

@@ -8,6 +8,15 @@ tutorial](new-feature-tutorial.html).
 This page documents some important issues related to writing schema
 migrations.
 
+* **Naming**: Please provide clear names for new database migrations
+  (e.g. `0072_realmauditlog_add_index_event_time.py`).  Since in the
+  Django migrations system, the filename is the name for the
+  migration, this just means moving the migration file to have a
+  reasonable name.  Note that `tools/test-migrations` will fail in
+  Travis CI if a migration has bad name of the form
+  `0089_auto_20170710_1353.py`, which are what Django generates
+  automatically for nontrivial database schema changes.
+
 * **Large tables**: For large tables like Message and UserMessage, you
   want to take precautions when adding columns to the table,
   performing data backfills, or building indexes. We have a
@@ -18,11 +27,11 @@ migrations.
 * **Numbering conflicts across branches**: If you've done your schema
   change in a branch, and meanwhile another schema change has taken
   place, Django will now have two migrations with the same number. To
-  fix this, you need to renumber your migration(s), fix up
-  the "dependencies" entries in your migration(s), and rewrite your
-  git history as needed.  There is a tutorial
-  [here](migration-renumbering.html) that walks you though that
-  process.
+  fix this, you can either run `./tools/renumber-migrations` which
+  renumbers your migration(s) and fixes up the "dependencies" entries in your
+  migration(s), and then rewrite your git history as needed, or you can do it
+  manually. There is a tutorial [here](migration-renumbering.html) that
+  walks you though that process.
 
 * **Atomicity**.  By default, each Django migration is run atomically
   inside a transaction.  This can be problematic if one wants to do

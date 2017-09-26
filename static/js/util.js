@@ -138,7 +138,7 @@ exports.rtrim = function (str) {
 // doesn't support the ECMAScript Internationalization API
 // Specification, do a dumb string comparison because
 // String.localeCompare is really slow.
-exports.strcmp = (function () {
+exports.make_strcmp = function () {
     try {
         var collator = new Intl.Collator();
         return collator.compare;
@@ -149,7 +149,8 @@ exports.strcmp = (function () {
     return function util_strcmp(a, b) {
         return (a < b ? -1 : (a > b ? 1 : 0));
     };
-}());
+};
+exports.strcmp = exports.make_strcmp();
 
 exports.escape_regexp = function (string) {
     // code from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
@@ -196,14 +197,6 @@ exports.CachedValue.prototype = {
     },
 };
 
-exports.execute_early = function (func) {
-    if (page_params.test_suite) {
-        $(document).one('phantom_page_loaded', func);
-    } else {
-        $(func);
-    }
-};
-
 exports.is_all_or_everyone_mentioned = function (message_content) {
     var all_everyone_re = /(^|\s)(@\*{2}(all|everyone)\*{2})|(@(all|everyone))($|\s)/;
     return all_everyone_re.test(message_content);
@@ -228,7 +221,41 @@ exports.move_array_elements_to_front = function util_move_array_elements_to_fron
     return selected_elements.concat(unselected_elements);
 };
 
+// check by the userAgent string if a user's client is likely mobile.
+exports.is_mobile = function () {
+    var regex = "Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini";
+    return new RegExp(regex, "i").test(window.navigator.userAgent);
+};
+
+exports.prefix_sort = function (query, objs, get_item) {
+    // Based on Bootstrap typeahead's default sorter, but taking into
+    // account case sensitivity on "begins with"
+    var beginswithCaseSensitive = [];
+    var beginswithCaseInsensitive = [];
+    var noMatch = [];
+    var obj;
+    var item;
+    for (var i = 0; i < objs.length; i += 1) {
+        obj = objs[i];
+        if (get_item) {
+            item = get_item(obj);
+        } else {
+            item = obj;
+        }
+        if (item.indexOf(query) === 0) {
+            beginswithCaseSensitive.push(obj);
+        } else if (item.toLowerCase().indexOf(query.toLowerCase()) === 0) {
+            beginswithCaseInsensitive.push(obj);
+        } else {
+            noMatch.push(obj);
+        }
+    }
+    return { matches: beginswithCaseSensitive.concat(beginswithCaseInsensitive),
+             rest:    noMatch };
+};
+
 return exports;
+
 }());
 if (typeof module !== 'undefined') {
     module.exports = util;

@@ -15,20 +15,20 @@ class JiraHookTests(WebhookTestCase):
                                   stream_name="jira",
                                   content_type="application/json")
 
-        self.assert_json_error(result, "Got JIRA event type we don't support: jira:issue_unknown")
+        self.assert_json_success(result)
 
         result = self.client_post(url,
                                   self.get_body('unknown_v2'),
                                   stream_name="jira",
                                   content_type="application/json")
 
-        self.assert_json_error(result, "Got JIRA event type we don't support: jira:issue_unknown")
+        self.assert_json_success(result)
 
     def test_custom_stream(self):
         # type: () -> None
-        api_key = self.get_api_key(self.TEST_USER_EMAIL)
+        api_key = self.test_user.api_key
         url = "/api/v1/external/jira?api_key=%s&stream=jira_custom" % (api_key,)
-        msg = self.send_json_payload(self.TEST_USER_EMAIL,
+        msg = self.send_json_payload(self.test_user,
                                      url,
                                      self.get_body('created_v2'),
                                      stream_name="jira_custom",

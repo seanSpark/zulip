@@ -9,12 +9,12 @@ import ujson
 import random
 import time
 import threading
-import atexit
 from collections import defaultdict
 
 from zerver.lib.utils import statsd
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Union
 
+MAX_REQUEST_RETRIES = 3
 Consumer = Callable[[BlockingChannel, Basic.Deliver, pika.BasicProperties, str], None]
 
 # This simple queuing library doesn't expose much of the power of
@@ -25,11 +25,11 @@ class SimpleQueueClient(object):
     def __init__(self):
         # type: () -> None
         self.log = logging.getLogger('zulip.queue')
-        self.queues = set() # type: Set[str]
-        self.channel = None # type: Optional[BlockingChannel]
-        self.consumers = defaultdict(set) # type: Dict[str, Set[Consumer]]
+        self.queues = set()  # type: Set[str]
+        self.channel = None  # type: Optional[BlockingChannel]
+        self.consumers = defaultdict(set)  # type: Dict[str, Set[Consumer]]
         # Disable RabbitMQ heartbeats since BlockingConnection can't process them
-        self.rabbitmq_heartbeat = 0
+        self.rabbitmq_heartbeat = 0  # type: Optional[int]
         self._connect()
 
     def _connect(self):
@@ -194,7 +194,7 @@ class TornadoQueueClient(SimpleQueueClient):
         super(TornadoQueueClient, self).__init__()
         # Enable rabbitmq heartbeat since TornadoConection can process them
         self.rabbitmq_heartbeat = None
-        self._on_open_cbs = [] # type: List[Callable[[], None]]
+        self._on_open_cbs = []  # type: List[Callable[[], None]]
 
     def _connect(self, on_open_cb = None):
         # type: (Optional[Callable[[], None]]) -> None
@@ -279,7 +279,7 @@ class TornadoQueueClient(SimpleQueueClient):
                           lambda: self.channel.basic_consume(wrapped_consumer, queue=queue_name,
                                                              consumer_tag=self._generate_ctag(queue_name)))
 
-queue_client = None # type: Optional[SimpleQueueClient]
+queue_client = None  # type: Optional[SimpleQueueClient]
 def get_queue_client():
     # type: () -> SimpleQueueClient
     global queue_client
@@ -290,12 +290,6 @@ def get_queue_client():
             queue_client = SimpleQueueClient()
 
     return queue_client
-
-def setup_tornado_rabbitmq():
-    # type: () -> None
-    # When tornado is shut down, disconnect cleanly from rabbitmq
-    if settings.USING_RABBITMQ:
-        atexit.register(lambda: queue_client.close())
 
 # We using a simple lock to prevent multiple RabbitMQ messages being
 # sent to the SimpleQueueClient at the same time; this is a workaround
@@ -312,3 +306,12 @@ def queue_json_publish(queue_name, event, processor):
             get_queue_client().json_publish(queue_name, event)
         else:
             processor(event)
+
+def retry_event(queue_name, event, failure_processor):
+    # type: (str, Dict[str, Any], Callable[[Dict[str, Any]], None]) -> None
+    assert 'failed_tries' in event
+    event['failed_tries'] += 1
+    if event['failed_tries'] > MAX_REQUEST_RETRIES:
+        failure_processor(event)
+    else:
+        queue_json_publish(queue_name, event, lambda x: None)

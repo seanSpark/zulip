@@ -22,15 +22,11 @@ def highlight_deleted(text):
     # type: (Text) -> Text
     return highlight_with_class('highlight_text_deleted', text)
 
-def highlight_replaced(text):
-    # type: (Text) -> Text
-    return highlight_with_class('highlight_text_replaced', text)
-
 def chunkize(text, in_tag):
     # type: (Text, bool) -> Tuple[List[Tuple[Text, Text]], bool]
     start = 0
     idx = 0
-    chunks = [] # type: List[Tuple[Text, Text]]
+    chunks = []  # type: List[Tuple[Text, Text]]
     for c in text:
         if c == '<':
             in_tag = True
@@ -78,6 +74,21 @@ def verify_html(html):
         return False
     return True
 
+def check_tags(text):
+    # type: (Text) -> Text
+    # The current diffing algorithm produces malformed html when text is
+    # added to existing new lines. This patch manually corrects that.
+    in_tag = False
+    if text.endswith('<'):
+        text = text[:-1]
+    for c in text:
+        if c == '<':
+            in_tag = True
+        elif c == '>' and not in_tag:
+            text = '<' + text
+            break
+    return text
+
 def highlight_html_differences(s1, s2):
     # type: (Text, Text) -> Text
     differ = diff_match_patch()
@@ -89,23 +100,18 @@ def highlight_html_differences(s1, s2):
     idx = 0
     while idx < len(ops):
         op, text = ops[idx]
-        next_op = None
-        if idx != len(ops) - 1:
-            next_op, next_text = ops[idx + 1]
-        if op == diff_match_patch.DIFF_DELETE and next_op == diff_match_patch.DIFF_INSERT:
-            # Replace operation
-            chunks, in_tag = chunkize(next_text, in_tag)
-            retval += highlight_chunks(chunks, highlight_replaced)
-            idx += 1
-        elif op == diff_match_patch.DIFF_INSERT and next_op == diff_match_patch.DIFF_DELETE:
-            # Replace operation
-            # I have no idea whether diff_match_patch generates inserts followed
-            # by deletes, but it doesn't hurt to handle them
+        text = check_tags(text)
+        if idx != 0:
+            prev_op, prev_text = ops[idx - 1]
+            prev_text = check_tags(prev_text)
+            # Remove visual offset from editing newlines
+            if '<p><br>' in text:
+                text = text.replace('<p><br>', '<p>')
+            elif prev_text.endswith('<p>') and text.startswith('<br>'):
+                text = text[4:]
+        if op == diff_match_patch.DIFF_DELETE:
             chunks, in_tag = chunkize(text, in_tag)
-            retval += highlight_chunks(chunks, highlight_replaced)
-            idx += 1
-        elif op == diff_match_patch.DIFF_DELETE:
-            retval += highlight_deleted('&nbsp;')
+            retval += highlight_chunks(chunks, highlight_deleted)
         elif op == diff_match_patch.DIFF_INSERT:
             chunks, in_tag = chunkize(text, in_tag)
             retval += highlight_chunks(chunks, highlight_inserted)
@@ -116,13 +122,13 @@ def highlight_html_differences(s1, s2):
 
     if not verify_html(retval):
         from zerver.lib.actions import internal_send_message
-        from zerver.models import get_user_profile_by_email
+        from zerver.models import get_system_bot
         # We probably want more information here
         logging.getLogger('').error('HTML diff produced mal-formed HTML')
 
         if settings.ERROR_BOT is not None:
             subject = "HTML diff failure on %s" % (platform.node(),)
-            realm = get_user_profile_by_email(settings.ERROR_BOT).realm
+            realm = get_system_bot(settings.ERROR_BOT).realm
             internal_send_message(realm, settings.ERROR_BOT, "stream",
                                   "errors", subject, "HTML diff produced malformed HTML")
         return s2

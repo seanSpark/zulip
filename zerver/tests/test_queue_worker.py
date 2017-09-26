@@ -13,15 +13,15 @@ from typing import Any, Callable, Dict, List, Mapping, Tuple
 
 from zerver.lib.test_helpers import simulated_queue_client
 from zerver.lib.test_classes import ZulipTestCase
-from zerver.models import get_client, get_user_profile_by_email, UserActivity
+from zerver.models import get_client, UserActivity
 from zerver.worker import queue_processors
 
-class WorkerTest(TestCase):
+class WorkerTest(ZulipTestCase):
     class FakeClient(object):
         def __init__(self):
             # type: () -> None
-            self.consumers = {} # type: Dict[str, Callable]
-            self.queue = [] # type: List[Tuple[str, Dict[str, Any]]]
+            self.consumers = {}  # type: Dict[str, Callable]
+            self.queue = []  # type: List[Tuple[str, Dict[str, Any]]]
 
         def register_json_consumer(self, queue_name, callback):
             # type: (str, Callable) -> None
@@ -33,11 +33,40 @@ class WorkerTest(TestCase):
                 callback = self.consumers[queue_name]
                 callback(data)
 
+    def test_mirror_worker(self):
+        # type: () -> None
+        fake_client = self.FakeClient()
+        data = [
+            dict(
+                message=u'\xf3test',
+                time=time.time(),
+                rcpt_to=self.example_email('hamlet'),
+            ),
+            dict(
+                message='\xf3test',
+                time=time.time(),
+                rcpt_to=self.example_email('hamlet'),
+            ),
+            dict(
+                message='test',
+                time=time.time(),
+                rcpt_to=self.example_email('hamlet'),
+            ),
+        ]
+        for element in data:
+            fake_client.queue.append(('email_mirror', element))
+
+        with patch('zerver.worker.queue_processors.mirror_email'):
+            with simulated_queue_client(lambda: fake_client):
+                worker = queue_processors.MirrorWorker()
+                worker.setup()
+                worker.start()
+
     def test_UserActivityWorker(self):
         # type: () -> None
         fake_client = self.FakeClient()
 
-        user = get_user_profile_by_email('hamlet@zulip.com')
+        user = self.example_user('hamlet')
         UserActivity.objects.filter(
             user_profile = user.id,
             client = get_client('ios')

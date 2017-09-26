@@ -23,7 +23,10 @@ common.then_send_message('stream', {
     content: 'test editing',
 });
 
-casper.waitForText("test editing");
+casper.then(function () {
+    casper.waitForSelectorText("#zhome .message_row", "test editing");
+});
+
 common.wait_for_message_actually_sent();
 
 then_edit_last_message();
@@ -47,7 +50,10 @@ common.then_send_message('stream', {
     content: '/me test editing one line with me',
 });
 
-casper.waitForText("test editing one line with me");
+casper.then(function () {
+    casper.waitForSelectorText("#zhome .message_row", "test editing one line with me");
+});
+
 common.wait_for_message_actually_sent();
 
 then_edit_last_message();
@@ -70,7 +76,9 @@ common.then_send_message('private', {
     content: "test editing pm",
 });
 
-casper.waitForText("test editing pm");
+casper.then(function () {
+    casper.waitForSelectorText("#zhome .message_row", "test editing pm");
+});
 common.wait_for_message_actually_sent();
 then_edit_last_message();
 
@@ -94,8 +102,8 @@ casper.then(function () {
     casper.test.assertNotVisible('form.message_edit_form', 'Message edit box not visible');
 
     common.keypress(37);
-    casper.waitUntilVisible("#message_edit_content", function () {
-        var fieldVal = common.get_form_field_value('#message_edit_content');
+    casper.waitUntilVisible(".message_edit_content", function () {
+        var fieldVal = common.get_form_field_value('.message_edit_content');
         casper.test.assertEquals(fieldVal, "test edited pm", "Opened editing last own message");
         casper.click('.message_edit_cancel');
     });

@@ -10,6 +10,9 @@ conflicts, I am about to narrate an exercise
 where I bring my development branch called
 showell-topic up to date with master.
 
+**Note:** You can also use the command `./tools/renumber-migrations` to
+automatically perform migration renumbering.
+
 In this example,
 there is a migration on master called
 `0024_realm_allow_message_editing.py`, and
@@ -82,9 +85,9 @@ semantic conflicts with the new changes from master:
 <output skipped>
 
   File "/srv/zulip-venv-cache/ad3a375e95a56d911510d7edba7e17280d227bc7/zulip-venv/local/lib/python2.7/site-packages/django/core/management/commands/migrate.py", line 105, in handle
-    "'python manage.py makemigrations --merge'" % name_str
+    "'./manage.py makemigrations --merge'" % name_str
 django.core.management.base.CommandError: Conflicting migrations detected (0026_topics_backfill, 0025_realm_message_content_edit_limit in zerver).
-To fix them run 'python manage.py makemigrations --merge'
+To fix them run './manage.py makemigrations --merge'
 
 <output skipped>
 

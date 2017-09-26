@@ -1,6 +1,11 @@
 .message_reactions {
     padding-left: 46px;
     overflow: hidden;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .message_reactions .message_reaction {
@@ -10,30 +15,32 @@
     height: 19px;
     cursor: pointer;
     background-color: #ffffff;
-    border: 1px solid #c7dfe6;
+    border: 1px solid hsl(194, 37%, 84%);
     border-radius: 4px;
 }
 
 .private-message .message_reactions .message_reaction {
-    /* Use the PM color background, since white-on-yellow looks bad. */
-    background-color: #feffe0;
+    background-color: hsl(192, 19%, 95%);
 }
 
-.message_reactions .reacted {
-    /* Needs to be important to override the .private-message one */
-    background-color: #eef7fa !important;
+.message_reactions .message_reaction.reacted {
+    background-color: hsl(195, 50%, 95%);
 }
 
-.message_reactions .message_reaction .emoji {
+.private-message .message_reactions .message_reaction.reacted {
+    background-color: hsl(196, 51%, 93%);
+    border-color: hsl(193, 38%, 70%);
+}
+
+.message_reaction .emoji {
     display: inline-block;
     vertical-align: top;
-    top: -3px;
-    margin: 0px;
+    top: 0px;
+    margin: 1px 3px;
 
-    transform: scale(0.70);
-    transform-origin: 50% 50%;
-    -moz-transform: scale(0.70);
-    -moz-transform-origin: 50% 50%;
+    height: 17px;
+    width: 17px;
+    position: relative;
 }
 
 .message_reactions .message_reaction_count {
@@ -42,7 +49,7 @@
     font-size: 0.8em;
     display: inline-block;
     vertical-align: top;
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
     margin: 0px 1px 0px 0px;
     line-height: 1em;
 }
@@ -54,7 +61,7 @@
 .message_reactions i {
     font-size: 1.3em;
     float: left;
-    color: #555;
+    color: hsl(0, 0%, 33%);
 }
 
 .message_reactions .reaction_button:not(:only-child) {
@@ -64,8 +71,15 @@
 .message_reactions:hover .message_reaction + .reaction_button {
     visibility: visible;
     pointer-events: all;
-    background-color: #fafafa;
-    color: #bbb;
+    background-color: hsl(0, 0%, 98%);
+    color: hsl(0, 0%, 73%);
+}
+
+.reaction_button_visible {
+    visibility: visible !important;
+    pointer-events: all !important;
+    opacity: 1 !important;
+    color: hsl(0, 0%, 73%);
 }
 
 .message_reactions .reaction_button i {
@@ -74,11 +88,11 @@
 }
 
 .message_reactions .reaction_button:hover i {
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
 }
 
 .message_reactions .message_reaction:hover {
-    border: thin solid #0088CC;
+    border: 1px solid hsl(200, 100%, 40%);
 }
 
 .message_reactions .reaction_button:only-child {
@@ -93,73 +107,124 @@
     height: 14px;
     border-radius: 4px;
     padding-left: 0.3em;
-    border: thin solid #bbb;
+    border: 1px solid hsl(0, 0%, 73%);
     padding-right: 0.3em;
     float: left;
 }
 
 .message_reactions .reaction_button:hover {
-    border: thin solid #0088CC;
-    background-color: #eef7fa;
+    border: 1px solid hsl(200, 100%, 40%);
+    background-color: hsl(195, 50%, 95%);
     cursor: pointer;
     opacity: 1.0;
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
 }
 
 .message_reactions .reaction_button .message_reaction_count {
     font-size: 1.1em;
-    color: #555;
+    color: hsl(0, 0%, 33%);
     margin-left: 3px;
 }
 
 .message_reactions .reaction_button:hover .message_reaction_count {
-    color: #0088CC;
+    color: hsl(200, 100%, 40%);
 }
 
-.reaction-popover {
-    display: inline-block;
-    width: 231px;
+.emoji-info-popover {
+    padding: 0;
+    height: 326px;
 }
 
-.reaction-popover-top {
-    padding-bottom: 0;
+.emoji-info-popover .popover-content {
+    padding: 0;
 }
 
-.reaction-popover-top .icon-vector-search {
-    display: inline-block;
-    vertical-align: top;
-    padding: 8px;
-    color: #bbb;
-    cursor: pointer;
+.emoji-info-popover.bottom .arrow {
+    border-bottom-color: #eee;
 }
 
-.reaction-popover-filter {
-    width: calc(100% - 48px);
+.emoji-info-popover.top .arrow {
+    border-top-color: #eee;
+}
+
+.emoji-popover {
+    display: block;
+    width: 250px;
+}
+
+.emoji-popover-top {
+    position: relative;
+
+    padding: 8px 10px;
+    margin-bottom: 0px;
+
+    background-color: #eee;
+
+    border-radius: 5px 5px 0px 0px;
+}
+
+.emoji-popover-top .icon-vector-search {
+    position: absolute;
+    color: hsl(0, 0%, 73%);
+    top: 15px;
+    left: 17px;
+    z-index: 3;
+}
+
+.emoji-popover-top .emoji-popover-filter {
     margin: auto;
-    padding-left: 3em;
+    padding-left: 22px;
+    width: calc(100% - 22px - 8px);
 }
 
-.reaction-popover-emoji-map {
-    margin: 0;
-    padding: 0.5em 0;
+.emoji-popover-emoji-map,
+.emoji-search-results-container {
+    padding: 0px;
+    position: relative;
     overflow: hidden;
-    overflow-y: auto;
+    display: block;
+    height: 250px;
+    width: 247px;
+    margin-left: 3px;
+}
+
+.emoji-search-results-container {
+    height: 283px;
+}
+
+.emoji-popover-results-heading {
+    font-weight: 600;
+    padding: 5px 3px 3px 5px;
+    font-size: 17px;
+}
+
+.emoji-popover-subheading {
+    font-weight: 600;
+    color: #333;
+    padding: 5px 3px;
+}
+
+.emoji-popover-emoji {
     display: inline-block;
-    height: 16.5em;
-}
-
-.reaction-popover-reaction {
-    float: left;
-    margin: 0.1em;
-    padding: 0.3em;
+    margin: 0;
+    padding: 6px;
     cursor: pointer;
-    border: thin solid white;
     border-radius: 0.5em;
+    height: 25px;
+    width: 25px;
 }
 
-.reaction-popover .reacted {
-    background-color: #eef7fa;
-    border-color: #add8e6;
+.emoji-popover-emoji.hide {
+    display: none;
+}
+
+.emoji-popover-emoji .emoji {
+    top: 6px;
+}
+
+.emoji-popover .reacted {
+    background-color: hsl(195, 50%, 95%);
+    border-color: hsl(195, 52%, 79%);
 }
 
 .emoji_alt_code {
@@ -168,7 +233,31 @@
     font-size: 0.8em;
     display: inline-block;
     vertical-align: top;
-    color: #333;
+    color: hsl(0, 0%, 20%);
     margin: 0px 1px 0px 0px;
     line-height: 1em;
+}
+
+.emoji-popover-category-tabs {
+    background-color: #eee;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.emoji-popover-category-tabs .emoji-popover-tab-item {
+    display: inline-block;
+    padding-top: 8px;
+    width: 25px;
+    height: 25px;
+    text-align: center;
+    color: #515151;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.emoji-popover-category-tabs .emoji-popover-tab-item.active {
+    background: #cecece;
 }
