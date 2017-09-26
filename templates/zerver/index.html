@@ -113,7 +113,9 @@ var page_params = {{ page_params }};
             {% endif %}
         </div><!--/tab-content-->
     </div>
-    <div class="column-right">
+    <div class="column-right" style="display:none">
+<!--       TODO(sean): Remove this right column entirely. Right now when you remove it it stops the messages from loading,
+      figure out why. -->
           {% include "zerver/right_sidebar.html" %}
     </div><!--/right sidebar-->
     {% include "zerver/lightbox_overlay.html" %}

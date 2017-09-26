@@ -164,7 +164,7 @@ p.n-margin {
     width: 100%;
     max-width: 1400px;
     min-width: 950px;
-    margin: 0px auto;
+    margin: 0px;
     padding: 0px;
     position: relative;
 }
@@ -181,16 +181,17 @@ p.n-margin {
     left: 0px;
 }
 
-.column-left,
 .column-right {
     width: 250px;
     max-width: 250px;
 }
 
 .column-left {
-    position: absolute;
-    left: 0px;
-    top: 0px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  background-color:#00CFEA;
+  width:350px;
 }
 
 .column-right {
@@ -207,8 +208,9 @@ p.n-margin {
 }
 
 .app-main .column-left .left-sidebar {
-    width: 242px;
+    width: 350px;
     padding-left: 0px;
+    background-color:#efefef;
 }
 
 .app-main .column-right .right-sidebar {
@@ -222,8 +224,8 @@ p.n-margin {
 }
 
 .column-middle {
-    margin-right: 250px;
-    margin-left: 250px;
+/*     margin-right: 250px; */
+    margin-left: 350px; /* left column is 350px wide, the rest goes to middle column. Right column isn't finished yet. */
     position: relative;
 }
 
@@ -431,7 +433,7 @@ a:hover code {
 }
 
 .sidebar-title {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: normal;
     display: inline;
 }
@@ -1640,7 +1642,7 @@ nav .column-left .nav-logo {
     margin-top: 8px;
     width: 25px;
     height: 25px;
-    background-image: url(../images/logo/zulip-icon-128x128.png);
+    background-image: url(../images/logo/spark-flame.png);
     background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: center center;
@@ -1654,7 +1656,7 @@ nav .column-left .company-name {
     margin-left: 8px;
     font-size: 1.2rem;
     font-weight: 600;
-    color: #52c2af;
+    color: #fff;
     letter-spacing: 0.1em;
     cursor: pointer;
 }
