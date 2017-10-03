@@ -1,7 +1,7 @@
 #left-sidebar {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-
+    box-shadow: 0px 0px 4px #383838;
     font-size: 0.89rem;
 }
 
@@ -31,6 +31,8 @@
 }
 #join_unsub_stream {
     margin-top: 1px;
+    float:left;
+    margin-left:0px;
 }
 
 #streams_inline_cog {
@@ -347,7 +349,7 @@ ul.topic-list {
     font-weight: normal;
 }
 
-#streams_header a {
+.left_pane_header a {
     text-decoration: none;
 }
 
@@ -419,9 +421,10 @@ li.expanded_private_message a {
     margin-right: 10px;
 }
 
-#streams_header {
+.left_pane_header {
     margin-right: 0px;
-    padding-left: 15px;
+    padding-left: 12px;
+    padding-top:12px;
 }
 
 #stream_filters .inactive_stream {

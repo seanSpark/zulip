@@ -2,20 +2,36 @@
   <!-- Test comment -->
 <nav class="header-main rightside-userlist" id="top_navbar">
   <div class="column-left">
-      <a class="brand no-style" href="#">
-          <img src="/static/images/logo/logo-white-128x128.png" class="nav-logo no-drag" alt=""/>
-          <div class="company-name">
-              SparkMD
-          </div>
+    <div class="top-left-inner">
+      <a class="brand-area" href="#">
+        <img src="/static/images/logo/logo-white-128x128.png" class="nav-logo no-drag"/>
+        <div class="company-name">
+            SparkMD
+        </div>
       </a>
+      <i id="profile_settings_icon" class="icon-vector-cog" data-toggle="tooltip" data-original-title="Edit Settings"></i>
+    <div class="row profile">
+      <img src="/static/images/example_nurse.png" class="nav-profile"/>
+      <div class="profile-name-container">
+          <span class="profile-name">Carol Wheeler</span>
+      </div>
+    </div>
   </div>
+</div>
   <div class="column-middle" id="navbar-middle">
     <div class="column-middle-inner">
-          <div id="streamlist-toggle" {%if embedded %} style="visibility: hidden"{% endif %}>
-            <a href="#" id="streamlist-toggle-button" role="button"><i class="icon-vector-reorder"></i>
-              <span id="streamlist-toggle-unreadcount">0</span>
-            </a>
+      <!-- <div id="right-nav-box" class="searchbox-rightmargin">
+        <div id="right-nav-left-side">
+          Patient care team view - picture with name.
+          <img src="/static/images/example_nurse.png" class="nav-profile"/>
+          <div class="profile-name-container">
+              <span class="patient-nav-name">Jonathan Smith</span>
           </div>
+          <span class="patient-nav-name">Chat with
+          <input class="search-query input-block-level" id="search_query" type="text" placeholder="Search" autocomplete="off" aria-label="Search" title="Search (/)"></span>
+        </div>
+      </div> -->
+          <!-- Chat searchbox. We'll want chat search functionality later on in some form. -->
           <div id="searchbox" class="searchbox-rightmargin">
             <div id="tab_bar" class="notdisplayed">
             </div>
@@ -28,7 +44,8 @@
                 <a class="search_icon" href="#search-operators" data-overlay-trigger="search-operators" title="{{ _('Search help') }}"><i class="icon-vector-search"></i></a>
               </div>
             </form>
-          </div>{# /searchbox #}
+          </div>{# /searchbox #} 
+        
     </div>
   </div>
   <div class="column-right" style="display:none">

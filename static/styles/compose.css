@@ -155,12 +155,10 @@ table.compose_table {
 }
 
 #below-compose-content {
-    width: 100%;
-    margin-top: 6px;
+    width: 24px;
 }
 
 #compose {
-    position: fixed;
     bottom: 0px;
     left: 0px;
     z-index: 2;
@@ -173,16 +171,22 @@ table.compose_table {
     margin: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    box-shadow: 0px 0px 4px #383838;
+}
+#attach-button{
+    /*This looks like a circle with a paperclip in the center.*/
+    display:inline-block;
+    float:left;
+    height:31px;
+    width:31px;
+    margin-top:0px;
+    border:1px solid hsl(0, 0%, 86%);
+    border-radius:33px;
 }
 
 .compose-content {
-    padding: 8px 10px 8px 10px;
-    margin-left: 250px;
-    margin-right: 250px;
     position: relative;
-
-    border-left: 1px solid hsl(0, 0%, 93%);
-    border-right: 1px solid hsl(0, 0%, 93%);
+    box-shadow:;
 }
 
 #compose_close {
@@ -288,13 +292,16 @@ table.compose_table {
 
 textarea.new_message_textarea {
     display: table-cell;
-    width: calc(100% - 12px);
+    /* Leave room for the attachment button on left and the send button on right */
+    width: calc(100% - 51px);
     padding: 5px;
     height: 1.5em;
     max-height: 22em;
     margin-bottom: 0px;
     resize: vertical !important;
     margin-top: 5px;
+    border-radius:33px;
+    margin-left:6px;
 }
 
 textarea.new_message_textarea,
@@ -304,6 +311,7 @@ textarea.new_message_textarea,
     box-shadow: none;
     -webkit-box-shadow: none;
     transition: border 0.2s ease;
+    margin-top:0px;
 }
 
 textarea.new_message_textarea:focus,
@@ -403,12 +411,11 @@ input.recipient_box {
     display: block;
     color: hsl(0, 0%, 46%);
     text-decoration: none;
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-    margin-right: 8px;
-    padding-top: 5px;
-    text-align: center;
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    margin-left: 7px;
+    margin-top:7px;
     float: left;
 }
 

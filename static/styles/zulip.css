@@ -13,7 +13,7 @@ html {
 }
 
 body {
-    font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family:  Helvetica, Open Sans, 'Helvetica Neue', Verdana;
 }
 
 /* Common background color */
@@ -90,13 +90,17 @@ p.n-margin {
 .modal-backdrop {
     z-index: 102;
 }
-
+#conversation_start_message {
+    text-align:center;
+    padding:12px;
+    font-weight:bold;
+}
 .top-messages-logo {
     position: absolute;
     left: calc(50% - 12px);
     top: 57px;
     width: 24px;
-    height: 24px;
+    height: 33px;
 }
 
 #unmute_muted_topic_notification {
@@ -192,7 +196,6 @@ p.n-margin {
 .app-main,
 .header-main {
     width: 100%;
-    max-width: 1400px;
     min-width: 950px;
     margin: 0px;
     padding: 0px;
@@ -232,8 +235,9 @@ p.n-margin {
 .app-main .column-left .left-sidebar,
 .app-main .column-right .right-sidebar {
     position: fixed;
-    margin-top: 50px;
+    margin-top: 103px; /* This number should be the height of the fixed-size upper left component */
     z-index: 100;
+    height:100%;
 }
 
 .app-main .column-left .left-sidebar {
@@ -483,9 +487,10 @@ a:hover code {
 }
 
 .sidebar-title {
-    font-size: 14px;
-    font-weight: normal;
+    font-size: 16px;
+    font-weight: 500;
     display: inline;
+    padding-left:8px;
 }
 
 .tooltip.in {
@@ -1486,6 +1491,12 @@ blockquote p {
     border-radius: 4px;
     overflow: hidden;
 }
+#profile_settings_icon {
+  float:right;
+  color: #333333;
+  opacity:1;
+  font-size:25px;
+}
 
 .home-error-bar {
     margin-top: 5px;
@@ -1508,9 +1519,14 @@ blockquote p {
     white-space: nowrap;
 }
 
-#searchbox {
+#right-nav-box {
     width: 100%;
-    height: 40px;
+    height: 60px;
+}
+#right-nav-left-side {
+    width: 66%;
+    height: 100%;
+    float:left;
 }
 
 #tab_bar {
@@ -1640,7 +1656,9 @@ blockquote p {
 #navbar-buttons ul.nav {
     margin: 0px;
 }
-
+.brand-area {
+    float:left;
+}
 #streamlist-toggle {
     display: none;
     position: absolute;
@@ -1752,30 +1770,58 @@ blockquote p {
 nav .column-left {
     text-align: center;
     background-color:#00CFEA;
-    height:100%;
+    height:auto;
+    box-shadow: 0px 0px 4px #383838;
 }
 
 nav a.no-style:hover {
     text-decoration: none;
     cursor: pointer;
 }
-
+.row.profile {
+    margin-left:0px;
+    width:100%;
+    float:left;
+    margin-top:12px;
+}
 nav .column-left .nav-logo {
     display: inline-block;
     vertical-align: top;
-    margin-top: 8px;
-    /*width: 25px;*/
+    margin-top: 0px;
     height: 25px;
-    background-image: url(../images/logo/spark-flame.png);
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
-    background-position: center center;
+}
+img.nav-profile {
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 0px;
+    height: 50px;
+    float:left;
+}
+nav .top-left-inner {
+    padding:12px;
+}
+.profile-name-container {
+    float:left;
+    height:50px;
+    margin-bottom:4px;
+    padding-left:12px;
+}
+span.profile-name {
+    font-size:20px;
+    color:white;
+    bottom:0;
+    line-height:50px;
+}
+span.patient-nav-name {
+    font-size:20px;
+    bottom:0;
+    line-height:50px;
 }
 
 nav .column-left .company-name {
     display: inline-block;
     vertical-align: top;
-    margin-top: 12px;
+    margin-top: 4px;
     margin-left: 8px;
     font-size: 1.2rem;
     font-weight: 300;
@@ -1926,7 +1972,7 @@ div.floating_recipient {
 }
 
 #bottom_whitespace {
-    display: block;
+    display: none;
     height: 300px;
 }
 

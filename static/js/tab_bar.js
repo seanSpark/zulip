@@ -167,6 +167,7 @@ function build_tab_bar() {
 
 $(function () {
     $(document).on('narrow_activated.zulip', function () {
+        // This rewrites the header, listen to this in our own file to make our header.
         build_tab_bar();
     });
     $(document).on('narrow_deactivated.zulip', function () {

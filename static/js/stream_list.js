@@ -565,12 +565,6 @@ $(function () {
     $('#clear_search_stream_button').on('click', exports.clear_search);
 });
 
-$(function () {
-    $("#streams_header").expectOne().click(function (e) {
-        exports.toggle_filter_displayed(e);
-    });
-});
-
 exports.scroll_stream_into_view = function (stream_li) {
     var container = $('#stream-filters-container');
 
