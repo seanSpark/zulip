@@ -160,9 +160,10 @@ table.compose_table {
 
 #compose {
     bottom: 0px;
-    left: 0px;
+    right: 0px;
     z-index: 2;
-    width: 100%;
+    width: calc(100% - 350px);
+    position:fixed;
 }
 
 #compose-container {

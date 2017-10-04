@@ -1,7 +1,7 @@
 {# Home tab of the app, containing messages. #}
     <div class="message_area_padder message_list" id="main_div">
       <div class="top-messages-logo">
-        <img src="/static/images/logo/logo-blue-24x33.png" class="nav-logo no-drag"/>
+        <img src="/static/images/logo/logo-blue-24x33.png" class="top-messages-logo"/>
       </div>
       <div id="conversation_start_message">
         This is the beginning of the conversation.
@@ -30,14 +30,6 @@
       </div>
       <div id="empty_narrow_all_private_message" class="empty_feed_notice">
         <h4>{{ _('You have no private messages yet!') }}</h4>
-
-        {% trans %}
-        <p>Why not <a href="#" class="empty_feed_compose_private">
-            start the conversation</a>?</p>
-        {% endtrans %}
-      </div>
-      <div id="empty_narrow_private_message" class="empty_feed_notice">
-        <h4>{{ _('You have no private messages with this person yet!') }}</h4>
 
         {% trans %}
         <p>Why not <a href="#" class="empty_feed_compose_private">

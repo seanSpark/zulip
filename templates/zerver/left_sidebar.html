@@ -9,9 +9,11 @@
                       <div id="streams_list" class="zoom-out">
                         <div class="left_pane_header">
                           <input class="user-list-filter" type="text" placeholder="{{ _('Search people') }}" aria-label="{{ _('Search people') }}" title="{{ _('Search people') }} (q)"/>
+                          <!-- X button to delete the search.
                           <button type="button" class="btn clear_search_button" id="clear_search_people_button" disabled="disabled">
                               <i class="icon-vector-remove"></i>
-                          </button>
+                          </button> 
+                        -->
                           </div>
                         <div class="left_pane_header" class="zoom-in-hide">
 <!--                           TODO: Insert - or + icon here -->
@@ -75,6 +77,15 @@
                         </li>
                     </ul>
                 </div>
+            </div>
+            <div id="stream-filters-container" class="scrolling_list">
+                <div class="input-append notdisplayed">
+                    <input class="stream-list-filter" type="text" placeholder="{{ _('Search streams') }}" />
+                    <button type="button" class="btn clear_search_button" id="clear_search_stream_button" disabled="disabled">
+                        <i class="icon-vector-remove"></i>
+                    </button>
+                </div>
+                <ul id="stream_filters" class="filters"></ul>
             </div>
         </div>
               </div>

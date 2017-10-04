@@ -897,6 +897,7 @@ JS_SPECS = {
             'js/admin_sections.js',
             'js/admin.js',
             'js/tab_bar.js',
+            'js/right_nav.js',
             'js/emoji.js',
             'js/custom_markdown.js',
             'js/bot_data.js',

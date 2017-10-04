@@ -14,7 +14,6 @@ function make_tab(title, hash, data, extra_class, home) {
 function make_tab_data() {
     var tabs = [];
     var filter = narrow_state.filter();
-    console.log('got filter in tab_bar.js');
 
     function filtered_to_non_home_view_stream() {
         if (!filter.has_operator('stream')) {
@@ -120,6 +119,23 @@ function make_tab_data() {
     return tabs;
 }
 
+function get_name () {
+    var filter = narrow_state.filter();
+    if (filter.has_operator("pm-with")) {
+        console.log("1:1 message view, in right_nav.js.");
+        var emails = filter.operands("pm-with")[0].split(',');
+        var names = _.map(emails, function (email) {
+            if (! people.get_by_email(email)) {
+                return email;
+            }
+            return people.get_by_email(email).full_name;
+        });
+        console.log(names);
+        return names;
+    }
+    return 'no name found';
+}
+
 exports.colorize_tab_bar = function () {
     var stream_tab = $('#tab_list .stream');
     if (stream_tab.length > 0) {
@@ -152,31 +168,32 @@ exports.colorize_tab_bar = function () {
     }
 };
 
-function build_tab_bar() {
-    console.log('build_tab_bar called');
-    var tabs = make_tab_data();
+function build_right_nav() {
+    var name = get_name();
+    // var tabs = make_tab_data();
 
-    var tab_bar = $("#tab_bar");
-    tab_bar.empty();
+    var right_nav = $("#right-nav-box");
+    right_nav.empty();
 
-    tabs[tabs.length - 1].active = "active";
-    var rendered =  templates.render('tab_bar', {tabs: tabs});
+    // tabs[tabs.length - 1].active = "active";
+    var rendered =  templates.render('right_nav', {name: name});
 
-    tab_bar.append(rendered);
-    exports.colorize_tab_bar();
-    tab_bar.removeClass('notdisplayed');
+    right_nav.append(rendered);
+    // exports.colorize_tab_bar();
+    // tab_bar.removeClass('notdisplayed');
 }
 
 $(function () {
     $(document).on('narrow_activated.zulip', function () {
-        // This rewrites the header, listen to this in our own file to make our header.
-        build_tab_bar();
+        console.log('narrow activated - calling build_right_nav');
+        build_right_nav();
     });
     $(document).on('narrow_deactivated.zulip', function () {
-        build_tab_bar();
+        console.log('narrow deactivated - calling build_right_nav')
+        build_right_nav();
     });
-    console.log('building tab bar because of document start');
-    build_tab_bar();
+    // console.log('building right nav bc of document start.')
+    // build_right_nav();
 });
 
 return exports;
@@ -184,5 +201,5 @@ return exports;
 }());
 
 if (typeof module !== 'undefined') {
-    module.exports = tab_bar;
+    module.exports = right_nav;
 }

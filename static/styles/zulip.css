@@ -14,6 +14,7 @@ html {
 
 body {
     font-family:  Helvetica, Open Sans, 'Helvetica Neue', Verdana;
+    color:#434343;
 }
 
 /* Common background color */
@@ -96,9 +97,10 @@ p.n-margin {
     font-weight:bold;
 }
 .top-messages-logo {
-    position: absolute;
-    left: calc(50% - 12px);
-    top: 57px;
+    position:relative;
+    text-align:center;
+}
+img.top-messages-logo {
     width: 24px;
     height: 33px;
 }
@@ -182,7 +184,7 @@ p.n-margin {
     width: 100%;
     background: #ffffff;
     border-bottom: 1px solid hsl(0, 0%, 85%);
-    height: 40px;
+    box-shadow:0px 0px 4px #383838;
 }
 
 .app {
@@ -235,7 +237,7 @@ p.n-margin {
 .app-main .column-left .left-sidebar,
 .app-main .column-right .right-sidebar {
     position: fixed;
-    margin-top: 103px; /* This number should be the height of the fixed-size upper left component */
+    margin-top: 111px; /* This number should be the height of the fixed-size upper left component */
     z-index: 100;
     height:100%;
 }
@@ -275,8 +277,13 @@ label {
     line-height: inherit;
 }
 
-/* List of text-like input types taken from Bootstrap */
-
+/* List of text-like input types taken from Bootstrap, to override Bootstrap's styling. */
+/*.user-list-filter {
+    width: 314px;  350 - 24 (side margins) - 12 (inner padding) = 314
+    border: 1px solid hsl(0, 0%, 86%);
+    border-radius: 33px;
+    height:21px;
+}*/
 input[type="text"],
 input[type="password"],
 input[type="datetime"],
@@ -290,9 +297,11 @@ input[type="email"],
 input[type="url"],
 input[type="search"],
 input[type="tel"],
-input[type="color"] {
-    font-size: inherit;
-    height: 1.4em;
+input[type="color"] .user-list-filter {
+    width: 314px; /* 350 - 24 (side margins) - 12 (inner padding) = 314*/
+    border: 1px solid hsl(0, 0%, 86%);
+    border-radius: 33px;
+    height:21px;
 }
 
 li,
@@ -712,9 +721,7 @@ td.pointer {
 }
 
 .message_list .recipient_row {
-    background: hsl(0, 0%, 94%);
-    border-bottom: 1px solid hsl(0, 0%, 88%);
-    border-top: 1px solid hsl(0, 0%, 88%);
+    background: #fff;
     margin-bottom: 10px;
 }
 
@@ -1001,7 +1008,12 @@ td.pointer {
 
 .private-message .messagebox,
 .message_header_private_message .message-header-contents {
-    background-color: hsl(192, 19%, 95%);
+    background-color: #fff;
+}
+
+.private-message .messagebox:hover,
+.message_header_private_message .message-header-contents:hover{
+    background-color:#f7f7f7;
 }
 
 .message-header-contents {
@@ -1018,6 +1030,9 @@ td.pointer {
 
 .recipient_row .message_row:first-child .unread_marker {
     top: 0px;
+}
+.message_row:hover {
+
 }
 
 .unread_marker {
@@ -1066,18 +1081,6 @@ td.pointer {
     -moz-transition: all 0.3s ease-out;
     -o-transition: all 0.3s ease-out;
     transition: all 0.3s ease-out;
-}
-
-.selected_message .messagebox {
-    z-index: 1;
-}
-
-.selected_message .messagebox-content {
-    box-shadow: inset 0px 0px 0px 2px hsl(215, 47%, 50%),
-                     -1px -1px 0px 0px hsl(215, 47%, 50%),
-                      1px 1px 0px 0px hsl(215, 47%, 50%),
-                     -1px 1px 0px 0px hsl(215, 47%, 50%),
-                      1px -1px 0px 0px hsl(215, 47%, 50%);
 }
 
 .message_sender {
@@ -1273,12 +1276,6 @@ div.message_table {
 
 .message_row {
     position: relative;
-    border-left: 1px solid hsl(0, 0%, 88%);
-    border-right: 1px solid hsl(0, 0%, 88%);
-}
-
-.message_row.selected_message {
-    z-index: 2;
 }
 
 div.focused_table {
@@ -1521,12 +1518,13 @@ blockquote p {
 
 #right-nav-box {
     width: 100%;
-    height: 60px;
+    height: auto;
 }
 #right-nav-left-side {
     width: 66%;
-    height: 100%;
+    height: auto;
     float:left;
+    padding:12px;
 }
 
 #tab_bar {
@@ -1783,7 +1781,9 @@ nav a.no-style:hover {
     width:100%;
     float:left;
     margin-top:12px;
+    padding-bottom:12px;
 }
+/*right-nav-photo */
 nav .column-left .nav-logo {
     display: inline-block;
     vertical-align: top;
@@ -1797,14 +1797,26 @@ img.nav-profile {
     height: 50px;
     float:left;
 }
+img.right-nav-photo {
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 0px;
+    height: 50px;
+    float:left;
+    padding:0px;
+    padding-right:12px;
+}
 nav .top-left-inner {
     padding:12px;
 }
 .profile-name-container {
     float:left;
     height:50px;
-    margin-bottom:4px;
     padding-left:12px;
+}
+.private-chat-nav-name-container {
+    float:left;
+    height:50px;
 }
 span.profile-name {
     font-size:20px;
@@ -1812,10 +1824,13 @@ span.profile-name {
     bottom:0;
     line-height:50px;
 }
-span.patient-nav-name {
-    font-size:20px;
-    bottom:0;
-    line-height:50px;
+.private-chat-nav-name {
+    font-size:22px;
+    line-height:25px;
+}
+.private-chat-nav-role {
+    font-size:16px;
+    line-height:25px;
 }
 
 nav .column-left .company-name {
@@ -1833,6 +1848,30 @@ nav .column-left .company-name {
 
 nav a .no-style {
     text-decoration: none;
+}
+.right-nav-right-side {
+    height: auto;
+    width: 25%;
+    float: right;
+}
+.right-nav-block-full-height {
+    height: 100%;
+    float: right;
+    text-align:center;
+    padding:12px;
+}
+.right-nav-block-full-height:hover {
+    background-color: #efefef;
+}
+#right-nav-icon {
+    font-size: 32px;
+    color: #00CFEA;
+    margin:0px;
+}
+.right-nav-right-label {
+    color: #00CFEA;
+    line-height: 18px;
+    margin: 0px;
 }
 
 .navbar-search {

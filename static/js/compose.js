@@ -779,6 +779,7 @@ exports.initialize = function () {
     }
 
     function uploadFinished(i, file, response) {
+
         if (response.uri === undefined) {
             return;
         }
@@ -853,6 +854,7 @@ exports.initialize = function () {
             compose_actions.start("stream", {});
         }
     }
+    compose_actions.start('private');
 };
 
 return exports;
