@@ -331,15 +331,15 @@ $(function () {
         // open popovers.
         popovers.hide_all();
     });
-
-    $('#group-pms').expectOne().on('click', '.selectable_sidebar_block', function (e) {
-        var user_ids_string = $(e.target).parents('li').attr('data-user-ids');
-        var emails = people.user_ids_string_to_emails_string(user_ids_string);
-        narrow.by('pm-with', emails, {select_first_unread: true, trigger: 'sidebar'});
-        e.preventDefault();
-        e.stopPropagation();
-        popovers.hide_all();
-    });
+    // Spark TODO: This test is related to the right-sidebar and group messaging. Remove or fix.
+    // $('#group-pms').expectOne().on('click', '.selectable_sidebar_block', function (e) {
+    //     var user_ids_string = $(e.target).parents('li').attr('data-user-ids');
+    //     var emails = people.user_ids_string_to_emails_string(user_ids_string);
+    //     narrow.by('pm-with', emails, {select_first_unread: true, trigger: 'sidebar'});
+    //     e.preventDefault();
+    //     e.stopPropagation();
+    //     popovers.hide_all();
+    // });
 
     $("#subscriptions_table").on("click", ".exit, #subscription_overlay", function (e) {
         if ($(e.target).is(".exit, .exit-sign, #subscription_overlay, #subscription_overlay > .flex")) {

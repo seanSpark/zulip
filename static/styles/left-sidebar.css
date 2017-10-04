@@ -10,9 +10,9 @@
     padding-left: 10px;
 }
 
-#streams_inline_pip,
+.streams_inline_pip,
 #streams_filter_icon,
-#join_unsub_stream {
+.join_unsub_stream {
     color: #000;
     font-size: 13px;
     margin-top: 3px;
@@ -23,16 +23,18 @@
 #streams_filter_icon:hover {
    opacity: 1.0;
 }
+
 #streams_inline_pip {
-  float:right;
-  color: red;
-  opacity:1;
-  margin-right:15px
+    float: right;
+    color: red;
+    opacity: 1;
+    margin-right: 15px
 }
-#join_unsub_stream {
+
+.join_unsub_stream {
     margin-top: 1px;
-    float:left;
-    margin-left:0px;
+    float: left;
+    margin-left: 0px;
 }
 
 #streams_inline_cog {
@@ -424,7 +426,7 @@ li.expanded_private_message a {
 .left_pane_header {
     margin-right: 0px;
     padding-left: 12px;
-    padding-top:12px;
+    padding-top: 12px;
 }
 
 #stream_filters .inactive_stream {

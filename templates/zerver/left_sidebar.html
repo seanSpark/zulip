@@ -1,92 +1,59 @@
-          <div class="left-sidebar" id="left-sidebar">
-              <div class="bottom_sidebar">
-                      <!-- Keeping this link code around in case we need it for reference.
-                      <ul id="global_filters" class="filters">
-                          {# Special-case this link so we don't actually go to page top. #}
-                          <li data-name="home"
-                          class="global-filter active-filter home-link"><span class="filter-icon"><i class="icon-vector-home"></i></span><a href="#">{{ _('Home') }} <span class="count"><span class="value"></span></span></a></li>
-                      </ul> -->
-                      <div id="streams_list" class="zoom-out">
-                        <div class="left_pane_header">
-                          <input class="user-list-filter" type="text" placeholder="{{ _('Search people') }}" aria-label="{{ _('Search people') }}" title="{{ _('Search people') }} (q)"/>
-                          <!-- X button to delete the search.
-                          <button type="button" class="btn clear_search_button" id="clear_search_people_button" disabled="disabled">
-                              <i class="icon-vector-remove"></i>
-                          </button> 
-                        -->
-                          </div>
-                        <div class="left_pane_header" class="zoom-in-hide">
-<!--                           TODO: Insert - or + icon here -->
-                          <h4 class="sidebar-title" data-toggle="tooltip" title="{{ _('Subscribed streams') }}">
-                            <a href="">{{ _('Assignments') }}</a>
-                          </h4>
-                          <a href="" id="join_unsub_stream">
-                              <i class="icon-vector-plus" title="{{ _('Join stream')}}"></i>
-                          </a>
-                          <a href="#streams">
-                            <i id="streams_inline_pip" class='icon-vector-circle' data-toggle="tooltip" title="{{ _('Subscribe, add, or configure streams') }}"></i>
-                          </a>
-                        </div>
-<!--                         TODO: This topics_header element can probably be removed -->
-                        <div id="topics_header">
-                          <div class="all-streams-padding">
-                            <ul class="filters">
-                              <li data-name="all-streams">
-                                <i class="icon-vector-chevron-left"></i> <a href="" class="show-all-streams">{{ _('All streams') }}</a>
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                        
-                        <div class="left_pane_header" class="zoom-in-hide">
-<!--                           TODO: Insert - or + icon here -->
-                          <h4 class="sidebar-title" data-toggle="tooltip" title="{{ _('Subscribed streams') }}">
-                            <a href="">{{ _('My Patients') }}</a>
-                          </h4>
-                          <a href="" id="join_unsub_stream">
-                              <i class="icon-vector-plus" title="{{ _('Join stream')}}"></i>
-                          </a>
-                          <a href="#streams">
-                            <i id="streams_inline_pip" class='icon-vector-circle' data-toggle="tooltip" title="{{ _('Subscribe, add, or configure streams') }}"></i>
-                          </a>
-                        </div>
-                        
-                        <div id="stream-filters-container" class="scrolling_list">
-                            <input class="stream-list-filter notdisplayed" type="text" placeholder="{{ _('Search streams') }}" />
-                           <ul id="stream_filters" class="filters"></ul>
-                        </div>
-                      </div>
-                      <div id="streams_list" class="zoom-out">
-            <div class="left_pane_header" class="zoom-in-hide">
-              <h4 class="sidebar-title" data-toggle="tooltip" title="{{ _('Subscribed streams') }}">
-                <a href="">{{ _('Colleagues') }}</a>
-              </h4>
-                <i id="streams_inline_cog" class='icon-vector-cog' data-toggle="tooltip" title="{{ _('Subscribe, add, or configure streams') }}"></i>
-                <i id="join_unsub_stream" class="icon-vector-plus" data-toggle="tooltip" title="{{ _('Join stream')}}" ></i>
-            </div>
-            <ul id="user_presences" class="filters scrolling_list"></ul>
+<div class="left-sidebar" id="left-sidebar">
+  <div class="bottom_sidebar">
+  <!-- Keeping this link code around in case we need it for reference.
+  <ul id="global_filters" class="filters">
+  {# Special-case this link so we don't actually go to page top. #}
+  <li data-name="home"
+  class="global-filter active-filter home-link"><span class="filter-icon"><i class="icon-vector-home"></i></span><a href="#">{{ _('Home') }} <span class="count"><span class="value"></span></span></a></li>
+</ul> -->
+<div id="streams_list" class="zoom-out">
+  <div class="left_pane_header">
+    <input class="user-list-filter" type="text" placeholder="{{ _('Search people') }}" aria-label="{{ _('Search people') }}" title="{{ _('Search people') }} (q)"/>
+<!-- X button to delete the search.
+      <button type="button" class="btn clear_search_button" id="clear_search_people_button" disabled="disabled">
+          <i class="icon-vector-remove"></i>
+      </button>
+    -->
+  </div>
+  <div class="left_pane_header" class="zoom-in-hide">
+    <!-- TODO: Insert - or + icon here -->
+    <h4 class="sidebar-title" data-toggle="tooltip" title="{{ _('Subscribed streams') }}">
+      <a href="">{{ _('Assignments') }}</a>
+    </h4>
+    <a href="" class="join_unsub_stream">
+      <i class="icon-vector-plus" title="{{ _('Join stream')}}"></i>
+    </a>
+    <!-- <a href="#streams">
+      <i class='streams_inline_pip icon-vector-circle' data-toggle="tooltip" title="{{ _('Subscribe, add, or configure streams') }}"></i>
+    </a> -->
+  </div>
+  <div class="left_pane_header" class="zoom-in-hide">
+    <!-- TODO: Insert - or + icon here -->
+    <h4 class="sidebar-title" data-toggle="tooltip" title="{{ _('Subscribed streams') }}">
+      <a href="">{{ _('My Patients') }}</a>
+    </h4>
+    <a href="" class="join_unsub_stream">
+      <i class="icon-vector-plus" title="{{ _('Join stream')}}"></i>
+    </a>
+    <!-- <a href="#streams">
+      <i class='streams_inline_pip icon-vector-circle' data-toggle="tooltip" title="{{ _('Subscribe, add, or configure streams') }}"></i>
+    </a> -->
+  </div>
 
-
-
-            <!-- possibly unneeded below -->
-            <div id="topics_header">
-                <div class="all-streams-padding">
-                    <ul class="filters">
-                        <li data-name="all-streams">
-                            <a href="" class="show-all-streams"> <i class="icon-vector-chevron-left"></i>{{ _('All streams') }}</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div id="stream-filters-container" class="scrolling_list">
-                <div class="input-append notdisplayed">
-                    <input class="stream-list-filter" type="text" placeholder="{{ _('Search streams') }}" />
-                    <button type="button" class="btn clear_search_button" id="clear_search_stream_button" disabled="disabled">
-                        <i class="icon-vector-remove"></i>
-                    </button>
-                </div>
-                <ul id="stream_filters" class="filters"></ul>
-            </div>
-        </div>
-              </div>
-          </div>
+  <div id="stream-filters-container" class="scrolling_list">
+    <input class="stream-list-filter notdisplayed" type="text" placeholder="{{ _('Search streams') }}" />
+    <ul id="stream_filters" class="filters"></ul>
+  </div>
+</div>
+<div class="left_pane_header" class="zoom-in-hide">
+  <h4 class="sidebar-title" data-toggle="tooltip" title="{{ _('Subscribed streams') }}">
+    <a href="">{{ _('Colleagues') }}</a>
+  </h4>
+  <i id="streams_inline_cog" class='icon-vector-cog' data-toggle="tooltip" title="{{ _('Subscribe, add, or configure streams') }}"></i>
+  <a href="" class="join_unsub_stream">
+    <i class="icon-vector-plus" data-toggle="tooltip" title="{{ _('Join stream')}}" ></i>
+  </a>
+</div>
+<ul id="user_presences" class="filters scrolling_list"></ul>
+</div>
+</div>

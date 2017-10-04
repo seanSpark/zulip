@@ -14,7 +14,7 @@ html {
 
 body {
     font-family:  Helvetica, Open Sans, 'Helvetica Neue', Verdana;
-    color:#434343;
+    color: #434343;
 }
 
 /* Common background color */
@@ -92,13 +92,13 @@ p.n-margin {
     z-index: 102;
 }
 #conversation_start_message {
-    text-align:center;
-    padding:12px;
-    font-weight:bold;
+    text-align: center;
+    padding: 12px;
+    font-weight: bold;
 }
 .top-messages-logo {
-    position:relative;
-    text-align:center;
+    position: relative;
+    text-align: center;
 }
 img.top-messages-logo {
     width: 24px;
@@ -184,7 +184,7 @@ img.top-messages-logo {
     width: 100%;
     background: #ffffff;
     border-bottom: 1px solid hsl(0, 0%, 85%);
-    box-shadow:0px 0px 4px #383838;
+    box-shadow: 0px 0px 4px #383838;
 }
 
 .app {
@@ -222,10 +222,10 @@ img.top-messages-logo {
 }
 
 .column-left {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  width:350px;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 350px;
 }
 
 .column-right {
@@ -239,13 +239,13 @@ img.top-messages-logo {
     position: fixed;
     margin-top: 111px; /* This number should be the height of the fixed-size upper left component */
     z-index: 100;
-    height:100%;
+    height: 100%;
 }
 
 .app-main .column-left .left-sidebar {
     width: 350px;
     padding-left: 0px;
-    background-color:#efefef;
+    background-color: #efefef;
 }
 
 .app-main .column-right .right-sidebar {
@@ -278,12 +278,6 @@ label {
 }
 
 /* List of text-like input types taken from Bootstrap, to override Bootstrap's styling. */
-/*.user-list-filter {
-    width: 314px;  350 - 24 (side margins) - 12 (inner padding) = 314
-    border: 1px solid hsl(0, 0%, 86%);
-    border-radius: 33px;
-    height:21px;
-}*/
 input[type="text"],
 input[type="password"],
 input[type="datetime"],
@@ -301,7 +295,7 @@ input[type="color"] .user-list-filter {
     width: 314px; /* 350 - 24 (side margins) - 12 (inner padding) = 314*/
     border: 1px solid hsl(0, 0%, 86%);
     border-radius: 33px;
-    height:21px;
+    height: 21px;
 }
 
 li,
@@ -499,7 +493,7 @@ a:hover code {
     font-size: 16px;
     font-weight: 500;
     display: inline;
-    padding-left:8px;
+    padding-left: 8px;
 }
 
 .tooltip.in {
@@ -559,6 +553,8 @@ li.actual-dropdown-menu i {
 .message_area_padder {
     /* The height of the header and the tabbar plus a small gap */
     margin-top: 93px;
+    /* The height of the compose bar + 12. */
+    margin-bottom:66px;
     /* This is needed for the floating recipient bar
        in Firefox only, for some reason;
        otherwise it gets a scrollbar */
@@ -1012,8 +1008,8 @@ td.pointer {
 }
 
 .private-message .messagebox:hover,
-.message_header_private_message .message-header-contents:hover{
-    background-color:#f7f7f7;
+.message_header_private_message .message-header-contents:hover {
+    background-color: #f7f7f7;
 }
 
 .message-header-contents {
@@ -1489,10 +1485,8 @@ blockquote p {
     overflow: hidden;
 }
 #profile_settings_icon {
-  float:right;
-  color: #333333;
-  opacity:1;
-  font-size:25px;
+    float: right;
+    margin-bottom:0px;
 }
 
 .home-error-bar {
@@ -1523,8 +1517,8 @@ blockquote p {
 #right-nav-left-side {
     width: 66%;
     height: auto;
-    float:left;
-    padding:12px;
+    float: left;
+    padding: 12px;
 }
 
 #tab_bar {
@@ -1655,7 +1649,7 @@ blockquote p {
     margin: 0px;
 }
 .brand-area {
-    float:left;
+    float: left;
 }
 #streamlist-toggle {
     display: none;
@@ -1700,10 +1694,9 @@ blockquote p {
 }
 
 .nav .dropdown-menu {
-    left: auto;
-    right: 0px;
+    left: 0px;
     top: 30px;
-    min-width: 180px;
+    min-width: 194px;
     -webkit-box-shadow: 0px 0px 5px hsla(0, 0%, 0%, 0.2);
     -moz-box-shadow: 0px 0px 5px hsla(0, 0%, 0%, 0.2);
     box-shadow: 0px 0px 5px hsla(0, 0%, 0%, 0.2);
@@ -1714,7 +1707,7 @@ blockquote p {
     width: 0px;
     height: 0px;
     top: -7px;
-    right: 10px;
+    left: 10px;
     display: inline-block;
     border-right: 7px solid transparent;
     border-bottom: 7px solid hsl(0, 0%, 66%);
@@ -1723,20 +1716,12 @@ blockquote p {
     z-index: 10;
 }
 
-#navbar-buttons ul.nav .dropdown-toggle,
-#navbar-buttons ul.nav li.active .dropdown-toggle {
-    font-size: 20px;
-    color: hsl(0, 0%, 52%);
-    text-shadow: none;
-    padding-left: 0px !important;
-    background-color: inherit;
-    box-shadow: inherit;
-    -webkit-box-shadow: inherit;
-    -moz-box-shadow: inherit;
-    display: block;
-    position: absolute;
-    right: 0px;
-    top: 3px;
+#settings-dropdown .icon-vector-cog {
+    font-size:20px;
+}
+
+#settings-dropdown .icon-vector-caret-down {
+    font-size:14px;
 }
 
 #navbar-buttons ul.nav .dropdown-toggle,
@@ -1744,7 +1729,7 @@ blockquote p {
     color: hsl(0, 0%, 7%);
 }
 
-#navbar-buttons ul.nav li.dropdown.open .dropdown-toggle {
+#settings-dropdown {
     background: none;
     color: hsl(0, 0%, 7%);
     text-shadow: none;
@@ -1767,8 +1752,8 @@ blockquote p {
 
 nav .column-left {
     text-align: center;
-    background-color:#00CFEA;
-    height:auto;
+    background-color: #00CFEA;
+    height: auto;
     box-shadow: 0px 0px 4px #383838;
 }
 
@@ -1777,11 +1762,11 @@ nav a.no-style:hover {
     cursor: pointer;
 }
 .row.profile {
-    margin-left:0px;
-    width:100%;
-    float:left;
-    margin-top:12px;
-    padding-bottom:12px;
+    margin-left: 0px;
+    width: 100%;
+    float: left;
+    margin-top: 12px;
+    padding-bottom: 12px;
 }
 /*right-nav-photo */
 nav .column-left .nav-logo {
@@ -1795,42 +1780,42 @@ img.nav-profile {
     vertical-align: top;
     margin-top: 0px;
     height: 50px;
-    float:left;
+    float: left;
 }
 img.right-nav-photo {
     display: inline-block;
     vertical-align: top;
     margin-top: 0px;
     height: 50px;
-    float:left;
-    padding:0px;
-    padding-right:12px;
+    float: left;
+    padding: 0px;
+    padding-right: 12px;
 }
 nav .top-left-inner {
-    padding:12px;
+    padding: 12px;
 }
 .profile-name-container {
-    float:left;
-    height:50px;
-    padding-left:12px;
+    float: left;
+    height: 50px;
+    padding-left: 12px;
 }
 .private-chat-nav-name-container {
-    float:left;
-    height:50px;
+    float: left;
+    height: 50px;
 }
 span.profile-name {
-    font-size:20px;
-    color:white;
-    bottom:0;
-    line-height:50px;
+    font-size: 20px;
+    color: white;
+    bottom: 0;
+    line-height: 50px;
 }
 .private-chat-nav-name {
-    font-size:22px;
-    line-height:25px;
+    font-size: 22px;
+    line-height: 25px;
 }
 .private-chat-nav-role {
-    font-size:16px;
-    line-height:25px;
+    font-size: 16px;
+    line-height: 25px;
 }
 
 nav .column-left .company-name {
@@ -1843,7 +1828,7 @@ nav .column-left .company-name {
     color: #fff;
     letter-spacing: 0.1em;
     cursor: pointer;
-    font-family:"Poppins", "Helvetica Neue", "Open Sans", "Segoe UI", "Verdana";
+    font-family: "Poppins", "Helvetica Neue", "Open Sans", "Segoe UI", "Verdana";
 }
 
 nav a .no-style {
@@ -1857,8 +1842,8 @@ nav a .no-style {
 .right-nav-block-full-height {
     height: 100%;
     float: right;
-    text-align:center;
-    padding:12px;
+    text-align: center;
+    padding: 12px;
 }
 .right-nav-block-full-height:hover {
     background-color: #efefef;
@@ -1866,7 +1851,7 @@ nav a .no-style {
 #right-nav-icon {
     font-size: 32px;
     color: #00CFEA;
-    margin:0px;
+    margin: 0px;
 }
 .right-nav-right-label {
     color: #00CFEA;

@@ -153,6 +153,7 @@ exports.rebuild_recent = function (active_conversation) {
 };
 
 exports.update_private_messages = function () {
+    console.log('updating private messages');
     exports._build_private_messages_list();
 
     if (! narrow_state.active()) {
@@ -167,6 +168,7 @@ exports.update_private_messages = function () {
         // TODO: This should be the reply-to of the thread.
         exports.rebuild_recent("");
     } else if (is_pm_filter) {
+        console.log('inside of is_pm_filter');
         exports.rebuild_recent("");
         $("#global_filters li[data-name='private']").addClass('active-filter');
     }

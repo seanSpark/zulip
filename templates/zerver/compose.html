@@ -36,8 +36,8 @@
                          value="" placeholder="{{ _('Topic') }}" autocomplete="off" tabindex="0" aria-label="{{ _('Topic') }}"/>
               </td>
             </tr>
-            <!-- Recipient list. Keeping this code for now, because it has a neat autocomplete feature that may be useful
-              in search. -->
+<!-- Recipient list. Keeping this code for now, because it has a neat autocomplete feature that may be useful
+     in search. -->
             <tr id="private-message" style="display:none">
               <td class="message_header_colorblock message_header_private_message message_header left_part">
 
@@ -54,13 +54,12 @@
               <td class="messagebox" colspan="2">
                 <textarea class="new_message_textarea" name="content" id="new_message_content" rows="1"
                           value="" placeholder="{{ _('Compose your message here...') }}" tabindex="0" maxlength="10000" aria-label="{{ _('Compose your message here...') }}"></textarea>
-<!--                 
-Preview HTMl. Keeping this code to help to support image previews right in the chat box.
+<!-- Preview HTMl. Keeping this code to help to support image previews right in the chat box.
                 <div class="scrolling_list" id="preview_message_area" style="display:none;">
                   <div id="markdown_preview_spinner"></div>
                   <div id="preview_content"></div>
-                </div> 
-              -->
+                </div>
+-->
                 <div class="drag"></div>
                 <div id="attach-button">
                   <input type="file" id="file_input" class="notvisible pull-left" multiple />
@@ -70,8 +69,8 @@ Preview HTMl. Keeping this code to help to support image previews right in the c
                   <a class="message-control-button icon-vector-paper-clip notdisplayed"
                      id="attach_files" href="#" title="{{ _('Attach files') }}"></a>
                   <span id="sending-indicator">{{ _('Sending...') }}</span>
-                  <!-- 
- Checkbox setting whether pressing enter sends automatically. The code may be interesting as it sets a user-level server setting.
+<!-- Checkbox setting whether pressing enter sends automatically. The code may be interesting as it sets a
+    user-level server setting.
                   <div id="send_controls" class="new-style">
                     <label id="enter-sends-label" class="compose_checkbox_label" for="enter_sends">{{ _('Press Enter to send') }}&nbsp;</label>
                     <input type="checkbox" id="enter_sends" name="enter_sends" value="enter_sends" />

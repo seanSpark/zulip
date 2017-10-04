@@ -704,8 +704,6 @@ function render(template_name, args) {
             is_stream: true,
             content: 'This is message one.',
             last_edit_timestr: '11:00',
-            starred: true,
-            starred_status: "Unstar",
         },
     };
 
@@ -718,9 +716,6 @@ function render(template_name, args) {
 
     var first_message_text = first_message.find(".message_content").text().trim();
     assert.equal(first_message_text, "This is message one.");
-
-    var starred_title = first_message.find(".star").attr("title");
-    assert.equal(starred_title, "Unstar this message (*)");
 }());
 
 (function message_edit_form() {
@@ -742,7 +737,6 @@ function render(template_name, args) {
             msg: {
                 id: 1,
                 match_content: 'This is message one.',
-                starred: true,
                 is_stream: true,
                 content: 'This is message one.',
             },
@@ -782,9 +776,6 @@ function render(template_name, args) {
 
     var last_message_html = $(html).next('.recipient_row').find('div.messagebox:last .message_content').html().trim();
     assert.equal(last_message_html, 'This is message <span class="highlight">two</span>.');
-
-    var highlighted_subject_word = $(html).find('a.narrows_by_subject .highlight').text();
-    assert.equal(highlighted_subject_word, 'two');
 
     global.write_handlebars_output("message_group", html);
 }());

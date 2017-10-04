@@ -132,7 +132,8 @@ exports.add_message_metadata = function (message) {
 
     switch (message.type) {
     case 'stream':
-    // TODO: Make all messages streams, but limit who can view streams. Remove the notion of private messages.
+    // TODO: Make all messages streams, but limit who can view streams.
+    // Remove the notion of private messages.
         message.is_stream = true;
         message.stream = message.display_recipient;
         composebox_typeahead.add_topic(message.stream, message.subject);

@@ -109,7 +109,6 @@ function assert_hidden(sel) {
     start('stream', opts);
 
     assert_visible('#stream-message');
-    assert_hidden('#private-message');
 
     assert.equal($('#stream').val(), 'stream1');
     assert.equal($('#subject').val(), 'topic1');
@@ -129,7 +128,6 @@ function assert_hidden(sel) {
     start('private', opts);
 
     assert_hidden('#stream-message');
-    assert_visible('#private-message');
 
     assert.equal($('#private_message_recipient').val(), 'foo@example.com');
     assert.equal($('#new_message_content').val(), 'hello');
@@ -140,7 +138,6 @@ function assert_hidden(sel) {
     assert_hidden('#compose_controls');
     cancel();
     assert_visible('#compose_controls');
-    assert_hidden('#private-message');
     assert(!compose_state.composing());
 }());
 

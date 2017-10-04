@@ -854,7 +854,6 @@ exports.initialize = function () {
             compose_actions.start("stream", {});
         }
     }
-    compose_actions.start('private');
 };
 
 return exports;

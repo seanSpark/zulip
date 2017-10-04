@@ -55,7 +55,7 @@ $(function () {
             window.location.replace(page_params.login_page);
         }
     });
-
+    compose_actions.start('private');
     if (typeof $ !== 'undefined') {
         $.fn.expectOne = function () {
             if (blueslip && this.length !== 1) {

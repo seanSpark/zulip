@@ -14,7 +14,6 @@ function make_tab(title, hash, data, extra_class, home) {
 function make_tab_data() {
     var tabs = [];
     var filter = narrow_state.filter();
-    console.log('got filter in tab_bar.js');
 
     function filtered_to_non_home_view_stream() {
         if (!filter.has_operator('stream')) {
@@ -153,7 +152,6 @@ exports.colorize_tab_bar = function () {
 };
 
 function build_tab_bar() {
-    console.log('build_tab_bar called');
     var tabs = make_tab_data();
 
     var tab_bar = $("#tab_bar");
@@ -175,7 +173,6 @@ $(function () {
     $(document).on('narrow_deactivated.zulip', function () {
         build_tab_bar();
     });
-    console.log('building tab bar because of document start');
     build_tab_bar();
 });
 

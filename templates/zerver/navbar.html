@@ -9,20 +9,106 @@
             SparkMD
         </div>
       </a>
-      <i id="profile_settings_icon" class="icon-vector-cog" data-toggle="tooltip" data-original-title="Edit Settings"></i>
-    <div class="row profile">
-      <img src="/static/images/example_nurse.png" class="nav-profile"/>
-      <div class="profile-name-container">
-          <span class="profile-name">Carol Wheeler</span>
+      <ul class="nav" role="navigation" id="profile_settings_icon">
+              <li class="dropdown actual-dropdown-menu active" id="gear-menu">
+                <a id="settings-dropdown" href="#" role="button" class="dropdown-toggle" data-target="nada" data-toggle="dropdown" title="Menu (g)">
+                  <i class="icon-vector-cog"></i><i class="icon-vector-caret-down settings-dropdown-caret"></i>
+                </a>
+                <ul class="dropdown-menu" role="menu" aria-labelledby="settings-dropdown">
+                  
+                  <li class="invisible active" style="display:none;" role="presentation"><a href="#home" data-toggle="tab"></a></li>
+                  <li role="presentation">
+                    <a href="#streams" role="menuitem">
+                      <i class="icon-vector-exchange"></i> Manage streams
+                    </a>
+                  </li>
+                  <li role="presentation">
+                    <a href="#settings" role="menuitem">
+                      <i class="icon-vector-wrench"></i> Settings
+                    </a>
+                  </li>
+                  <li class="admin-menu-item" role="presentation">
+                    <a href="#organization" role="menuitem">
+                      <i class="icon-vector-bolt"></i>
+                      <span>Organization settings</span>
+                    </a>
+                  </li>
+                  <li class="divider"></li>
+                  <li role="presentation">
+                    <a href="/help" target="_blank" role="menuitem">
+                      <i class="icon-vector-question-sign"></i> User documentation
+                    </a>
+                  </li>
+                  <li role="presentation">
+                    <a tabindex="0" role="menuitem" data-overlay-trigger="keyboard-shortcuts">
+                      <i class="icon-vector-keyboard"></i> Keyboard shortcuts (?)
+                    </a>
+                  </li>
+                  <li role="presentation">
+                    <a tabindex="0" role="menuitem" data-overlay-trigger="markdown-help">
+                      <i class="icon-vector-pencil"></i> Message formatting
+                    </a>
+                  </li>
+                  <li role="presentation">
+                    <a tabindex="0" role="menuitem" data-overlay-trigger="search-operators">
+                      <i class="icon-vector-search"></i> Search operators
+                    </a>
+                  </li>
+                  <li class="divider" role="presentation"></li>
+                  <li role="presentation">
+                    <a href="https://zulipchat.com/apps/" target="_blank" role="menuitem">
+                      <i class="icon-vector-desktop"></i> Desktop &amp; mobile apps
+                    </a>
+                  </li>
+                  <li role="presentation">
+                    <a href="/integrations" target="_blank" role="menuitem">
+                      <i class="icon-vector-github"></i> Integrations
+                    </a>
+                  </li>
+                  <li role="presentation">
+                    <a href="/api" target="_blank" role="menuitem">
+                      <i class="icon-vector-sitemap"></i> API documentation
+                    </a>
+                  </li>
+                  <li role="presentation">
+                    <a href="/stats" target="_blank" role="menuitem">
+                      <i class="icon-vector-bar-chart"></i>
+                      <span>Statistics</span>
+                    </a>
+                  </li>
+                  <li class="divider" role="presentation"></li>
+                  
+                  
+                  <li role="presentation">
+                    <a href="#invite" role="menuitem">
+                      <i class="icon-vector-plus-sign"></i> Invite users
+                    </a>
+                  </li>
+                  <li class="divider" role="presentation"></li>
+                  
+                  
+                  <li role="presentation">
+                    <a href="#logout" class="logout_button" role="menuitem">
+                      <i class="icon-vector-off"></i> Log out
+                    </a>
+                  </li>
+                  
+                </ul>
+              </li>
+            </ul>
+      <div class="row profile">
+        <img src="/static/images/example_nurse.png" class="nav-profile"/>
+        <div class="profile-name-container">
+            <span class="profile-name">Carol Wheeler</span>
+        </div>
       </div>
     </div>
   </div>
-</div>
   <div class="column-middle" id="navbar-middle">
     <div class="column-middle-inner">
       <div id="right-nav-box">
       </div>
-          <!-- Chat searchbox. We'll want chat search functionality later on in some form. 
+          <!-- Chat searchbox. We'll want chat search functionality later on in some form.
           <div id="searchbox" class="searchbox-rightmargin">
             <div id="tab_bar" class="notdisplayed">
             </div>
@@ -36,126 +122,7 @@
               </div>
             </form>
           </div>{# /searchbox #} -->
-        
     </div>
-  </div>
-  <div class="column-right" style="display:none">
-        <div id="userlist-toggle">
-            <a href="#" id="userlist-toggle-button" role="button"><i class="icon-vector-group"></i>
-              <span id="userlist-toggle-unreadcount">0</span>
-            </a>
-        </div>
-        <div id="navbar-buttons" {%if embedded %} style="visibility: hidden"{% endif %}>
-            <ul class="nav" role="navigation">
-              <li class="dropdown actual-dropdown-menu" id="gear-menu">
-                <a id="settings-dropdown" href="#" role="button" class="dropdown-toggle" data-target="nada" data-toggle="dropdown" title="{{ _('Menu') }} (g)">
-                  <i class="icon-vector-cog"></i><i class="icon-vector-caret-down settings-dropdown-caret"></i>
-                </a>
-                <ul class="dropdown-menu" role="menu" aria-labelledby="settings-dropdown">
-                  {#
-                  It is quite ingrained in our frontend code that your Home
-                  view is a Bootstrap Nav tab, even though we don't show the tab
-                  anymore
-                  #}
-                  <li class="invisible" style="display:none;" role="presentation"><a href="#home" data-toggle="tab"></a></li>
-                  <li role="presentation">
-                    <a href="#streams" role="menuitem">
-                      <i class="icon-vector-exchange"></i> {{ _('Manage streams') }}
-                    </a>
-                  </li>
-                  <li role="presentation">
-                    <a href="#settings" role="menuitem">
-                      <i class="icon-vector-wrench"></i> {{ _('Settings') }}
-                    </a>
-                  </li>
-                  <li class="admin-menu-item" role="presentation">
-                    <a href="#organization" role="menuitem">
-                      <i class="icon-vector-bolt"></i>
-                      <span>{{ _('Manage organization') }}</span>
-                    </a>
-                  </li>
-                  <li class="divider"></li>
-                  <li role="presentation">
-                    <a href="/help" target="_blank" role="menuitem">
-                      <i class="icon-vector-question-sign"></i> {{ _('User documentation') }}
-                    </a>
-                  </li>
-                  <li role="presentation">
-                    <a tabindex="0" role="menuitem" data-overlay-trigger="keyboard-shortcuts">
-                      <i class="icon-vector-keyboard"></i> {{ _('Keyboard shortcuts') }} (?)
-                    </a>
-                  </li>
-                  <li role="presentation">
-                    <a tabindex="0" role="menuitem" data-overlay-trigger="markdown-help">
-                      <i class="icon-vector-pencil"></i> {{ _('Message formatting') }}
-                    </a>
-                  </li>
-                  <li role="presentation">
-                    <a tabindex="0" role="menuitem" data-overlay-trigger="search-operators">
-                      <i class="icon-vector-search"></i> {{ _('Search operators') }}
-                    </a>
-                  </li>
-                  <li class="divider" role="presentation"></li>
-                  <li role="presentation">
-                    <a href="{{ apps_page_url }}" target="_blank" role="menuitem">
-                      <i class="icon-vector-desktop"></i> {{ _('Desktop & mobile apps') }}
-                    </a>
-                  </li>
-                  <li role="presentation">
-                    <a href="/integrations" target="_blank" role="menuitem">
-                      <i class="icon-vector-github"></i> {{ _('Integrations') }}
-                    </a>
-                  </li>
-                  <li role="presentation">
-                    <a href="/api" target="_blank" role="menuitem">
-                      <i class="icon-vector-sitemap"></i> {{ _('API documentation') }}
-                    </a>
-                  </li>
-                  <li role="presentation">
-                    <a href="/stats" target="_blank" role="menuitem">
-                      <i class="icon-vector-bar-chart"></i>
-                      <span>{{ _('Statistics') }}</span>
-                    </a>
-                  </li>
-                  <li class="divider" role="presentation"></li>
-                  {% if enable_feedback %}
-                  <li role="presentation">
-                    <a href="#feedback" class="feedback" role="menuitem">
-                      <i class="icon-vector-comment"></i> {{ _('Feedback') }}
-                    </a>
-                  </li>
-                  {% endif %}
-                  {% if show_invites %}
-                  <li role="presentation">
-                    <a href="#invite" role="menuitem">
-                      <i class="icon-vector-plus-sign"></i> {{ _('Invite users') }}
-                    </a>
-                  </li>
-                  <li class="divider" role="presentation"></li>
-                  {% endif %}
-                  {% if show_webathena %}
-                  <li title="{% trans %}Grant Zulip the Kerberos tickets needed to run your Zephyr mirror via Webathena{% endtrans %}" id="webathena_login_menu" role="presentation">
-                    <a href="#webathena" class="webathena_login" role="menuitem">
-                      <i class="icon-vector-bolt"></i>{{ _('Link with Webathena') }}
-                    </a>
-                  </li>
-                  {% endif %}
-                  <li role="presentation">
-                    <a href="#logout" class="logout_button" role="menuitem">
-                      <i class="icon-vector-off"></i> {{ _('Log out') }}
-                    </a>
-                  </li>
-                  {% if show_debug %}
-                  <li role="presentation">
-                    <a href="#debug" data-toggle="tab" role="menuitem">
-                      <i class="icon-vector-barcode"></i> {{ _('Debug') }}
-                    </a>
-                  </li>
-                  {% endif %}
-                </ul>
-              </li>
-            </ul>
-        </div>
   </div>
 </nav>
 </div>

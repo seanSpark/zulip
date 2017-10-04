@@ -27,7 +27,8 @@ function size_blocks(blocks, usable_height) {
     });
 }
 
-function set_user_list_heights(res, usable_height, user_presences, group_pms) {
+function set_user_list_heights(res, usable_height, user_presences) {
+    // Spark TODO: set group height here.
     // Calculate these heights:
     //    res.user_presences_max_height
     //    res.group_pms_max_height
@@ -35,30 +36,26 @@ function set_user_list_heights(res, usable_height, user_presences, group_pms) {
         {
             real_height: user_presences.prop('scrollHeight'),
         },
-        {
-            real_height: group_pms.prop('scrollHeight'),
-        },
+        // {
+        //     real_height: group_pms.prop('scrollHeight'),
+        // },
     ];
 
     size_blocks(blocks, usable_height);
 
     res.user_presences_max_height = blocks[0].max_height;
-    res.group_pms_max_height = blocks[1].max_height;
+    res.group_pms_max_height = 120; // Spark TODO, this is hardcoded, it was blocks[1].max_height;
 }
 
 function get_new_heights() {
     var res = {};
     var viewport_height = message_viewport.height();
     var top_navbar_height = $("#top_navbar").safeOuterHeight(true);
-    var invite_user_link_height = $("#invite-user-link").safeOuterHeight(true) || 0;
-
     res.bottom_whitespace_height = viewport_height * 0.4;
 
     res.main_div_min_height = viewport_height - top_navbar_height;
 
     res.bottom_sidebar_height = viewport_height - top_navbar_height;
-
-    res.right_sidebar_height = viewport_height - parseInt($("#right-sidebar").css("marginTop"), 10);
 
     res.stream_filters_max_height =
         res.bottom_sidebar_height
@@ -71,19 +68,20 @@ function get_new_heights() {
 
     // RIGHT SIDEBAR
     var user_presences = $('#user_presences').expectOne();
-    var group_pms = $('#group-pms').expectOne();
 
-    var usable_height =
-        res.right_sidebar_height
-        - $("#feedback_section").safeOuterHeight(true)
-        - parseInt(user_presences.css("marginTop"),10)
-        - parseInt(user_presences.css("marginBottom"), 10)
-        - $("#userlist-header").safeOuterHeight(true)
-        - $(".user-list-filter").safeOuterHeight(true)
-        - invite_user_link_height
-        - parseInt(group_pms.css("marginTop"),10)
-        - parseInt(group_pms.css("marginBottom"), 10)
-        - $("#group-pm-header").safeOuterHeight(true);
+    var usable_height = 140;
+    // This is the height of the list of users, it should be calculated
+    // intelligently along these lines.
+        // res.right_sidebar_height
+        // - $("#feedback_section").safeOuterHeight(true)
+        // - parseInt(user_presences.css("marginTop"),10)
+        // - parseInt(user_presences.css("marginBottom"), 10)
+        // - $("#userlist-header").safeOuterHeight(true)
+        // - $(".user-list-filter").safeOuterHeight(true)
+        // - invite_user_link_height
+        // - parseInt(group_pms.css("marginTop"),10)
+        // - parseInt(group_pms.css("marginBottom"), 10)
+        // - $("#group-pm-header").safeOuterHeight(true);
 
     // set these
     // res.user_presences_max_height
@@ -91,8 +89,7 @@ function get_new_heights() {
     set_user_list_heights(
         res,
         usable_height,
-        user_presences,
-        group_pms
+        user_presences
     );
 
     return res;
