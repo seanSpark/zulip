@@ -77,6 +77,8 @@ function query_matches_emoji(query, emoji) {
 // has reliable information about whether it was a tab or a shift+tab.
 var nextFocus = false;
 
+// This function is called whenever a key is pressed while the message box is in focus. Includes
+// pressing Enter and all keydowns.
 function handle_keydown(e) {
     var code = e.keyCode || e.which;
 
@@ -112,9 +114,7 @@ function handle_keydown(e) {
         }
 
         // If no typeaheads are shown...
-        if (!($("#subject").data().typeahead.shown ||
-              $("#stream").data().typeahead.shown ||
-              $("#private_message_recipient").data().typeahead.shown ||
+        if (!($("#private_message_recipient").data().typeahead.shown ||
               $("#new_message_content").data().typeahead.shown)) {
 
             // If no typeaheads are shown and the user is tabbing from the message content box,
@@ -395,8 +395,8 @@ exports.compose_matches_sorter = function (matches) {
         return typeahead_helper.sort_emojis(matches, this.token);
     } else if (this.completing === 'mention') {
         return typeahead_helper.sort_recipients(matches, this.token,
-                                                compose_state.stream_name(),
-                                                compose_state.subject());
+                                                narrow_state.stream(),
+                                                narrow_state.topic());
     } else if (this.completing === 'stream') {
         return typeahead_helper.sort_streams(matches, this.token);
     } else if (this.completing === 'syntax') {

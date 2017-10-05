@@ -80,8 +80,8 @@ exports.snapshot_message = function () {
         message.reply_to = recipient;
         message.private_message_recipient = recipient;
     } else {
-        message.stream = compose_state.stream_name();
-        message.subject = compose_state.subject();
+        message.stream = narrow_state.stream();
+        message.subject = narrow_state.topic();
     }
     return message;
 };

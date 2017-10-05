@@ -38,8 +38,8 @@ function preserve_state(send_after_reload, save_pointer, save_narrow, save_compo
         var msg_type = compose_state.get_message_type();
         if (msg_type === 'stream') {
             url += "+msg_type=stream";
-            url += "+stream=" + encodeURIComponent(compose_state.stream_name());
-            url += "+subject=" + encodeURIComponent(compose_state.subject());
+            url += "+stream=" + encodeURIComponent(narrow_state.stream());
+            url += "+subject=" + encodeURIComponent(narrow_state.topic());
         } else if (msg_type === 'private') {
             url += "+msg_type=private";
             url += "+recipient=" + encodeURIComponent(compose_state.recipient());

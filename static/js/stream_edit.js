@@ -218,7 +218,7 @@ function show_subscription_settings(sub_row) {
             return item_matches && !is_subscribed;
         },
         sorter: function (matches) {
-            var current_stream = compose_state.stream_name();
+            var current_stream = narrow_state.stream();
             return typeahead_helper.sort_recipientbox_typeahead(
                 this.query, matches, current_stream);
         },

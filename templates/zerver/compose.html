@@ -20,22 +20,6 @@
               <td class="ztable_comp_col1" />
               <td class="ztable_comp_col2" />
             </tr>
-            <tr id="stream-message">
-              <td class="message_header_colorblock message_header_stream left_part">
-              </td>
-              <td class="right_part">
-                  <span id="compose-lock-icon">
-                    <i class="icon-vector-lock" title="{{ _('This is an invite-only stream') }}"></i>
-                  </span>
-                  <input type="text" class="recipient_box" name="stream" id="stream"
-                         maxlength="30"
-                         value="" placeholder="{{ _('Stream') }}" autocomplete="off" tabindex="0" aria-label="{{ _('Stream') }}"/>
-                  <i class="icon-vector-narrow icon-vector-small"></i>
-                  <input type="text" class="recipient_box" name="subject" id="subject"
-                         maxlength="60"
-                         value="" placeholder="{{ _('Topic') }}" autocomplete="off" tabindex="0" aria-label="{{ _('Topic') }}"/>
-              </td>
-            </tr>
 <!-- Recipient list. Keeping this code for now, because it has a neat autocomplete feature that may be useful
      in search. -->
             <tr id="private-message" style="display:none">

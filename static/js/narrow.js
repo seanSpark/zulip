@@ -64,6 +64,7 @@ exports.activate = function (raw_operators, opts) {
     if (filter.has_operator("stream")) {
         if (filter.has_operator("topic")) {
             exports.narrow_title = filter.operands("topic")[0];
+            compose_actions.start('stream');
         } else {
             exports.narrow_title = filter.operands("stream")[0];
         }

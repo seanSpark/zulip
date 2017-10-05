@@ -189,14 +189,12 @@ people.add(bob);
     assert(compose.validate());
 
     compose_state.set_message_type('stream');
-    compose_state.stream_name('');
     $("#stream").select(noop);
     assert(!compose.validate());
     assert.equal($('#error-msg').html(), i18n.t('Please specify a stream'));
 
-    compose_state.stream_name('Denmark');
     global.page_params.realm_mandatory_topics = true;
-    compose_state.subject('');
+    narrow_state.topic('');
     $("#subject").select(noop);
     assert(!compose.validate());
     assert.equal($('#error-msg').html(), i18n.t('Please specify a topic'));
@@ -227,7 +225,6 @@ people.add(bob);
         subscribed: true,
     };
     stream_data.add_sub('social', sub);
-    compose_state.stream_name('social');
     assert(compose.validate());
     assert(!$("#compose-all-everyone").visible());
     assert(!$("#send-status").visible());
@@ -309,7 +306,7 @@ people.add(bob);
     // Tests start here.
     (function test_message_send_success_codepath() {
         stub_state = initialize_state_stub_dict();
-        compose_state.subject('');
+        narrow_state.topic('');
         compose_state.set_message_type('private');
         page_params.user_id = 101;
         compose_state.recipient('alice@example.com');

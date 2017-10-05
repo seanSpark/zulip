@@ -147,12 +147,12 @@ exports.update_messages = function update_messages(events) {
             var going_forward_change = _.indexOf(['change_later', 'change_all'], event.propagate_mode) >= 0;
 
             var stream_name = stream_data.get_sub_by_id(event.stream_id).name;
-            var compose_stream_name = compose_state.stream_name();
+            var compose_stream_name = narrow_state.stream();
 
             if (going_forward_change && stream_name && compose_stream_name) {
                 if (stream_name.toLowerCase() === compose_stream_name.toLowerCase()) {
-                    if (event.orig_subject === compose_state.subject()) {
-                        compose_state.subject(event.subject);
+                    if (event.orig_subject === narrow_state.topic()) {
+                        narrow_state.topic(event.subject);
                     }
                 }
             }

@@ -533,11 +533,6 @@ a:hover code {
     top: -18px;
 }
 
-.narrow-filter {
-    display: block;
-    position: relative;
-}
-
 .message_header_stream a.message_label_clickable {
     color: hsl(0, 0%, 20%);
 }
@@ -1007,8 +1002,7 @@ td.pointer {
     background-color: #fff;
 }
 
-.private-message .messagebox:hover,
-.message_header_private_message .message-header-contents:hover {
+.messagebox:hover{
     background-color: #f7f7f7;
 }
 
@@ -2707,4 +2701,7 @@ button.topic_edit_cancel {
     -webkit-user-drag: none;
     -webkit-user-select: none;
     -ms-user-select: none;
+}
+a:hover {
+    text-decoration: none;
 }

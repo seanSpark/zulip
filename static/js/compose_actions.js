@@ -18,17 +18,6 @@ exports.blur_textarea = function () {
     $('.message_comp').find('input, textarea, button').blur();
 };
 
-function hide_box() {
-    exports.blur_textarea();
-    $('#stream-message').hide();
-    // $('#private-message').hide();
-    $(".new_message_textarea").css("min-height", "");
-    compose_fade.clear_compose();
-    // $('.message_comp').hide();
-    $("#compose_controls").show();
-    compose.clear_preview_area();
-}
-
 function get_focus_area(msg_type, opts) {
     // Set focus to "Topic" when narrowed to a stream+topic and "New topic" button clicked.
     if (msg_type === 'stream' && opts.stream && ! opts.subject) {
@@ -116,7 +105,7 @@ exports.complete_starting_tasks = function (msg_type, opts) {
 
     exports.maybe_scroll_up_selected_message();
     ui_util.change_tab_to("#home");
-    compose_fade.start_compose(msg_type);
+    compose_fade.start_compose();
     exports.decorate_stream_bar(opts.stream);
     $(document).trigger($.Event('compose_started.zulip', opts));
     resize.resize_bottom_whitespace();
@@ -170,8 +159,8 @@ function fill_in_opts_from_current_narrowed_view(msg_type, opts) {
 function same_recipient_as_before(msg_type, opts) {
     return (compose_state.get_message_type() === msg_type) &&
             ((msg_type === "stream" &&
-              opts.stream === compose_state.stream_name() &&
-              opts.subject === compose_state.subject()) ||
+              opts.stream === narrow_state.stream() &&
+              opts.subject === narrow_state.topic()) ||
              (msg_type === "private" &&
               opts.private_message_recipient === compose_state.recipient()));
 }
@@ -198,9 +187,6 @@ exports.start = function (msg_type, opts) {
         clear_box();
     }
 
-    compose_state.stream_name(opts.stream);
-    compose_state.subject(opts.subject);
-
     // Set the recipients with a space after each comma, so it looks nice.
     compose_state.recipient(opts.private_message_recipient.replace(/,\s*/g, ", "));
 
@@ -216,30 +202,6 @@ exports.start = function (msg_type, opts) {
     show_box(msg_type, opts);
 
     exports.complete_starting_tasks(msg_type, opts);
-};
-
-exports.cancel = function () {
-    $("#new_message_content").height(40 + "px");
-
-    if (page_params.narrow !== undefined) {
-        // Never close the compose box in narrow embedded windows, but
-        // at least clear the subject and unfade.
-        compose_fade.clear_compose();
-        if (page_params.narrow_topic !== undefined) {
-            compose_state.subject(page_params.narrow_topic);
-        } else {
-            compose_state.subject("");
-        }
-        return;
-    }
-    hide_box();
-    $("#compose_close").hide();
-    resize.resize_bottom_whitespace();
-    clear_box();
-    notifications.clear_compose_notifications();
-    compose.abort_xhr();
-    compose_state.set_message_type(false);
-    $(document).trigger($.Event('compose_canceled.zulip'));
 };
 
 exports.respond_to_message = function (opts) {
@@ -317,36 +279,10 @@ exports.on_topic_narrow = function () {
         return;
     }
 
-    if (compose_state.stream_name() !== narrow_state.stream()) {
-        // If we changed streams, then we only leave the
-        // compose box open if there is content.
-        if (compose_state.has_message_content()) {
-            compose_fade.update_message_list();
-            return;
-        }
-
-        // Otherwise, avoid a mix.
-        exports.cancel();
-        return;
-    }
-
-    if (compose_state.subject()) {
-        // If the user has filled in a subject, we have
-        // a risk of a mix, and we can't reliably guess
-        // whether the old topic is appropriate (otherwise,
-        // why did they narrow?) or the new one is
-        // appropriate (after all, they were starting to
-        // compose on the old topic and may now be looking
-        // for info), so we punt and cancel.
-        exports.cancel();
-        return;
-    }
-
     // If we got this far, then the compose box has the correct
     // stream filled in, and we just need to update the topic.
     // See #3300 for context--a couple users specifically asked
     // for this convenience.
-    compose_state.subject(narrow_state.topic());
     $('#new_message_content').focus().select();
 };
 
@@ -365,11 +301,6 @@ exports.on_narrow = function () {
         exports.start('private');
         return;
     }
-
-    // If we got this far, then we assume the user is now in "reading"
-    // mode, so we close the compose box to make it easier to use navigation
-    // hotkeys and to provide more screen real estate for messages.
-    exports.cancel();
 };
 
 return exports;

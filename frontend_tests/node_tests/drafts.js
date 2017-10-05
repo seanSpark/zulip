@@ -115,7 +115,7 @@ var draft_2 = {
         global.compose_state.stream_name = function () {
             return draft.stream;
         };
-        global.compose_state.subject = function () {
+        global.narrow_state.topic = function () {
             return draft.subject;
         };
     }

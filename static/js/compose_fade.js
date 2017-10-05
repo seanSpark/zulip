@@ -9,35 +9,6 @@ exports.should_fade_message =  function (message) {
     return !util.same_recipient(focused_recipient, message);
 };
 
-exports.set_focused_recipient = function (msg_type) {
-    if (msg_type === undefined) {
-        focused_recipient = undefined;
-    }
-
-    // Construct focused_recipient as a mocked up element which has all the
-    // fields of a message used by util.same_recipient()
-    focused_recipient = {
-        type: msg_type,
-    };
-
-    if (focused_recipient.type === "stream") {
-        var stream_name = $('#stream').val();
-        focused_recipient.subject = $('#subject').val();
-        focused_recipient.stream = stream_name;
-        var sub = stream_data.get_sub(stream_name);
-        if (sub) {
-            focused_recipient.stream_id = sub.stream_id;
-        }
-    } else {
-        // Normalize the recipient list so it matches the one used when
-        // adding the message (see message_store.add_message_metadata()).
-        var reply_to = util.normalize_recipients(
-                $('#private_message_recipient').val());
-        focused_recipient.reply_to = reply_to;
-        focused_recipient.to_user_ids = people.reply_to_to_user_ids_string(reply_to);
-    }
-};
-
 function _display_messages_normally() {
     var table = rows.get_table(current_msg_list.table_name);
     table.find('.recipient_row').removeClass("message-fade");
@@ -221,8 +192,7 @@ exports.update_faded_users = function () {
 // cause typing sluggishness.
 exports.update_faded_messages = _.debounce(_update_faded_messages, 50);
 
-exports.start_compose = function (msg_type) {
-    exports.set_focused_recipient(msg_type);
+exports.start_compose = function () {
     _update_faded_messages();
 };
 

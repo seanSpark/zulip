@@ -146,41 +146,6 @@ exports.get_stream_li = function (stream_id) {
     return li;
 };
 
-function zoom_in(options) {
-    popovers.hide_all();
-    topic_list.zoom_in();
-    $("#streams_list").expectOne().removeClass("zoom-out").addClass("zoom-in");
-
-    // Hide stream list titles and pinned stream splitter
-    $(".stream-filters-label").each(function () {
-        $(this).hide();
-    });
-    $(".stream-split").each(function () {
-        $(this).hide();
-    });
-
-    $("#stream_filters li.narrow-filter").each(function () {
-        var elt = $(this);
-        var stream_id = options.stream_id.toString();
-
-        if (elt.attr('data-stream-id') === stream_id) {
-            elt.show();
-        } else {
-            elt.hide();
-        }
-    });
-}
-
-function zoom_out(options) {
-    popovers.hide_all();
-    topic_list.zoom_out();
-
-    if (options.stream_li) {
-        exports.scroll_stream_into_view(options.stream_li);
-    }
-    exports.show_all_streams();
-}
-
 exports.show_all_streams = function () {
     // Show stream list titles and pinned stream splitter
     $(".stream-filters-label").each(function () {
@@ -310,13 +275,6 @@ exports.update_dom_with_unread_counts = function (counts) {
     counts.stream_count.each(function (count, stream_id) {
         set_stream_unread_count(stream_id, count);
     });
-
-    // counts.topic_count maps streams to hashes of topics to counts
-    counts.topic_count.each(function (subject_hash, stream_id) {
-        subject_hash.each(function (count, subject) {
-            topic_list.set_count(stream_id, subject, count);
-        });
-    });
 };
 
 exports.rename_stream = function (sub) {
@@ -345,7 +303,6 @@ exports.refresh_pinned_or_unpinned_stream = function (sub) {
 };
 
 function clear_topics() {
-    topic_list.close();
     exports.show_all_streams();
 }
 
@@ -412,12 +369,6 @@ exports.update_stream_sidebar_for_narrow = function (filter) {
         stream_li.addClass('active-filter');
     }
 
-    if (stream_id !== topic_list.active_stream_id()) {
-        clear_topics();
-    }
-
-    topic_list.rebuild(stream_li, stream_id);
-
     return stream_li;
 };
 
@@ -436,14 +387,6 @@ exports.handle_narrow_deactivated = function () {
 };
 
 exports.initialize = function () {
-    // TODO, Eventually topic_list won't be a big singleton,
-    // and we can create more component-based click handlers for
-    // each stream.
-    topic_list.set_click_handlers({
-        zoom_in: zoom_in,
-        zoom_out: zoom_out,
-    });
-
     $(document).on('subscription_add_done.zulip', function (event) {
         exports.create_sidebar_row(event.sub);
         exports.build_stream_list();
@@ -455,16 +398,28 @@ exports.initialize = function () {
 
 
     $('#stream_filters').on('click', 'li .subscription_block', function (e) {
+        // This runs when a user clicks on a stream (aka a group chat or patient chat)
         if (e.metaKey || e.ctrlKey) {
             return;
         }
         if (overlays.is_active()) {
             ui_util.change_tab_to('#home');
         }
+        // Put the numerical id of the stream into stream_id
         var stream_id = $(e.target).parents('li').attr('data-stream-id');
         var sub = stream_data.get_sub_by_id(stream_id);
         popovers.hide_all();
-        narrow.by('stream', sub.name, {select_first_unread: true, trigger: 'sidebar'});
+        // Trigger a narrow event for that stream.
+        // Grab first topic in this stream
+        var topic = sub.name + '1';
+
+        narrow.activate([{operator: 'stream',  operand: sub.name},
+                         {operator: 'topic', operand: topic}],
+                        {select_first_unread: true, trigger: 'sidebar'});
+
+
+
+        // narrow.by('stream', sub.name, {select_first_unread: true, trigger: 'sidebar'});
 
         e.preventDefault();
         e.stopPropagation();

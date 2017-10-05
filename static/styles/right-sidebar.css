@@ -6,19 +6,23 @@
 
 #group-pms li:hover,
 #user_presences li:hover {
-    background-color: hsl(93, 19%, 88%);
+    background-color: #ddd;
 }
 
 #user_presences,
 #group-pms {
     list-style-position: inside; /* Draw the bullets inside our box */
-    margin-left: 18px;
-    overflow: auto;
+    padding-left:12px;
+    padding-top:12px;
+    margin:0px;
 }
 
 #user_presences:hover,
 #group-pms:hover {
-    overflow-y: auto;
+    text-decoration: none;
+    padding-left:12px;
+    padding-top:12px;
+    margin:0px;
 }
 
 #user_presences li {
@@ -99,7 +103,7 @@
 }
 
 .user_sidebar_entry .selectable_sidebar_block {
-    width: 218px;
+    width: 100%;
     display: block;
 }
 

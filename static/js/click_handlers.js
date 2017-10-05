@@ -712,19 +712,6 @@ $(function () {
         if ($('.popover-inner, .emoji-info-popover').has(e.target).length === 0) {
             popovers.hide_all();
         }
-
-        if (compose_state.composing()) {
-            if ($(e.target).is("a")) {
-                // Refocus compose message text box if link is clicked
-                $("#new_message_content").focus();
-            } else if (!$(e.target).closest(".overlay").length &&
-            !window.getSelection().toString() &&
-            !$(e.target).closest('.popover-content').length) {
-                // Unfocus our compose area if we click out of it. Don't let exits out
-                // of overlays or selecting text (for copy+paste) trigger cancelling.
-                compose_actions.cancel();
-            }
-        }
     });
 
     // Workaround for Bootstrap issue #5900, which basically makes dropdowns

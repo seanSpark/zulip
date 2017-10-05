@@ -60,7 +60,8 @@
 }
 
 #stream_filters li {
-    padding: 0px;
+    margin-right: 0px;
+    padding-left: 12px;
 }
 
 #stream_filters li ul {
@@ -94,7 +95,7 @@
 
 #global_filters li:hover,
 #stream_filters li:hover {
-    background-color: hsl(93, 19%, 88%);
+    background-color: #ddd;
 }
 
 #stream_filters li.active-sub-filter:hover {
@@ -308,9 +309,12 @@ ul.filters li.out_of_home_view li.muted_topic {
 }
 
 #stream_filters .subscription_block {
-    padding: 1px 0px;
-    margin-right: 18px;
-    margin-left: 10px;
+    padding: 0px;
+    margin-right: 0px;
+    margin-left: 0px;
+}
+.stream_sidebar_privacy_swatch {
+    color:#00CFEA;
 }
 
 #stream_filters .subscription_block::after {

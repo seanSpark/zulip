@@ -43,7 +43,7 @@ function clear_out_file_list(jq_file_list) {
 }
 
 function show_all_everyone_warnings() {
-    var stream_count = stream_data.get_subscriber_count(compose_state.stream_name()) || 0;
+    var stream_count = stream_data.get_subscriber_count(narrow_state.stream()) || 0;
 
     var all_everyone_template = templates.render("compose_all_everyone", {count: stream_count});
     var error_area_all_everyone = $("#compose-all-everyone");
@@ -105,7 +105,7 @@ exports.empty_topic_placeholder = function () {
 
 function create_message_object() {
     // Subjects are optional, and we provide a placeholder if one isn't given.
-    var subject = compose_state.subject();
+    var subject = narrow_state.topic();
     if (subject === "") {
         subject = compose.empty_topic_placeholder();
     }
@@ -131,7 +131,7 @@ function create_message_object() {
         message.private_message_recipient = recipient;
         message.to_user_ids = people.email_list_to_user_ids_string(emails);
     } else {
-        var stream_name = compose_state.stream_name();
+        var stream_name = narrow_state.stream();
         message.to = stream_name;
         message.stream = stream_name;
         var sub = stream_data.get_sub(stream_name);
@@ -285,7 +285,6 @@ exports.send_message = function send_message(request) {
 
         echo.message_send_error(local_id, response);
     }
-
     exports.transmit_message(request, success, error);
     server_events.assert_get_events_running("Restarting get_events because it was not running during send");
 
@@ -437,14 +436,14 @@ exports.validate_stream_message_address_info = function (stream_name) {
 };
 
 function validate_stream_message() {
-    var stream_name = compose_state.stream_name();
+    var stream_name = narrow_state.stream();
     if (stream_name === "") {
         compose_error(i18n.t("Please specify a stream"), $("#stream"));
         return false;
     }
 
     if (page_params.realm_mandatory_topics) {
-        var topic = compose_state.subject();
+        var topic = narrow_state.topic();
         if (topic === "") {
             compose_error(i18n.t("Please specify a topic"), $("#subject"));
             return false;
@@ -612,7 +611,7 @@ exports.initialize = function () {
             $(event.target).attr('disabled', true);
         }
 
-        var stream_name = compose_state.stream_name();
+        var stream_name = narrow_state.stream();
         var sub = stream_data.get_sub(stream_name);
         if (!sub) {
             // This should only happen if a stream rename occurs
