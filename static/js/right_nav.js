@@ -1,32 +1,27 @@
-// This file is the Mustache JS the powers right_nav.handlebars.
-
-// For a more involved example of Mustache, take a look at nav
-
-function get_name() {
-    var filter = narrow_state.filter();
-    if (narrow_state.active()) {
-        if (filter.has_operator("pm-with")) {
-            var emails = filter.operands("pm-with")[0].split(',');
-            var names = _.map(emails, function (email) {
-                if (! people.get_by_email(email)) {
-                    return email;
-                }
-                return people.get_by_email(email).full_name;
-            });
-            return names;
-        }
-    }
-    return 'no name found';
-}
+// This file is the Mustache JS that powers right_nav.handlebars.
 
 function build_right_nav() {
-    var name = get_name();
-    var right_nav = $("#right-nav-box");
-    right_nav.empty();
-
-    var rendered =  templates.render('right_nav', {name: name});
-
-    right_nav.append(rendered);
+    if (narrow_state.active()) {
+        var filter = narrow_state.filter();
+        var right_nav = $("#right-nav-box");
+        right_nav.empty();
+        var rendered;
+        var picture;
+        var name;
+        if (filter.has_operator("pm-with")) {
+            // 1:1 Message.
+            var person = people.get_from_pm_filter(filter);
+            picture = person.avatar_url;
+            name = person.full_name;
+            rendered =  templates.render('right_nav', {is_private: true, name: name, picture_url: picture});
+        } else {
+            // Group chat
+            name = filter.operands("stream")[0];
+            picture = '#';
+            rendered =  templates.render('right_nav', {name: name, picture_url: picture});
+        }
+        right_nav.append(rendered);
+    }
 }
 
 $(function () {

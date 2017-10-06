@@ -520,49 +520,6 @@ function render(template_name, args) {
     assert.equal(a.text(), "Narrow to here");
 }());
 
-(function draft_table_body() {
-    var args = {
-        drafts: [
-            {
-                draft_id: '1',
-                is_stream: true,
-                stream: 'all',
-                stream_color: '#FF0000',  // rgb(255, 0, 0)
-                topic: 'tests',
-                content: 'Public draft',
-            },
-            {
-                draft_id: '2',
-                is_stream: false,
-                recipients: 'Jordan, Michael',
-                content: 'Private draft',
-            },
-        ],
-    };
-
-    var html = '';
-    html += '<div id="drafts_table">';
-    html += render('draft_table_body', args);
-    html += '</div>';
-
-    global.write_handlebars_output("draft_table_body", html);
-
-    var row_1 = $(html).find(".draft-row[data-draft-id='1']");
-    assert.equal(row_1.find(".stream_label").text().trim(), "all");
-    assert.equal(row_1.find(".stream_label").css("background"), "rgb(255, 0, 0)");
-    assert.equal(row_1.find(".stream_topic").text().trim(), "tests");
-    assert(!row_1.find(".message_row").hasClass("private-message"));
-    assert.equal(row_1.find(".messagebox").css("box-shadow"),
-                 "inset 2px 0px 0px 0px #FF0000, -1px 0px 0px 0px #FF0000");
-    assert.equal(row_1.find(".message_content").text().trim(), "Public draft");
-
-    var row_2 = $(html).find(".draft-row[data-draft-id='2']");
-    assert.equal(row_2.find(".stream_label").text().trim(), "You and Jordan, Michael");
-    assert(row_2.find(".message_row").hasClass("private-message"));
-    assert.equal(row_2.find(".message_content").text().trim(), "Private draft");
-}());
-
-
 (function email_address_hint() {
     var html = render('email_address_hint');
     global.write_handlebars_output("email_address_hint", html);
@@ -1004,11 +961,8 @@ function render(template_name, args) {
 
     global.write_handlebars_output("stream_sidebar_row", html);
 
-    var swatch = $(html).find(".stream-privacy");
-    assert.equal(swatch.attr('id'), 'stream_sidebar_privacy_swatch_999');
-
     // test to ensure that the hashtag element from stream_privacy exists.
-    assert.equal($(html).find(".stream-privacy").children("*").attr("class"), "hashtag");
+    assert.equal($(html).find(".stream-privacy").children("*").attr("class"), "icon-vector-comments");
 }());
 
 (function subscription_invites_warning_modal() {
@@ -1138,37 +1092,6 @@ function render(template_name, args) {
 
     var button = $(html).find("button:first");
     assert.equal(button.find("i").attr("class"), 'icon-vector-ok');
-}());
-
-(function topic_list_item() {
-    var args = {
-        is_muted: false,
-        topic_name: 'lunch',
-        url: '/lunch/url',
-        unread: 5,
-    };
-
-    var html = render('topic_list_item', args);
-
-    global.write_handlebars_output("topic_list_item", html);
-
-    assert.equal($(html).attr('data-topic-name'), 'lunch');
-}());
-
-
-(function topic_sidebar_actions() {
-    var args = {
-        stream_name: 'social',
-        topic_name: 'lunch',
-        can_mute_topic: true,
-    };
-    var html = render('topic_sidebar_actions', args);
-
-    global.write_handlebars_output("topic_sidebar_actions", html);
-
-    var a = $(html).find("a.narrow_to_topic");
-    assert.equal(a.text().trim(), 'Narrow to topic lunch');
-
 }());
 
 (function typeahead_list_item() {

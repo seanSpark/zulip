@@ -336,14 +336,16 @@ exports.get_sidebar_stream_topic_info  = function (filter) {
     return result;
 };
 
-function deselect_stream_items() {
-    $("ul#stream_filters li").removeClass('active-filter active-sub-filter');
-}
+exports.deselect_stream_items = function () {
+    $("ul#stream_filters li").removeClass('active-filter');
+    $("ul#user_presences li").removeClass('active-filter');
+};
 
+// Spark - this function was originally just for channels, we will make it for both
+// channels and 1:1 chats.
 exports.update_stream_sidebar_for_narrow = function (filter) {
     var info = exports.get_sidebar_stream_topic_info(filter);
-
-    deselect_stream_items();
+    exports.deselect_stream_items();
 
     var stream_id = info.stream_id;
 
@@ -368,7 +370,7 @@ exports.update_stream_sidebar_for_narrow = function (filter) {
     if (!info.topic_selected) {
         stream_li.addClass('active-filter');
     }
-
+    stream_li.addClass('active-filter');
     return stream_li;
 };
 
@@ -382,7 +384,7 @@ exports.handle_narrow_activated = function (filter) {
 };
 
 exports.handle_narrow_deactivated = function () {
-    deselect_stream_items();
+    exports.deselect_stream_items();
     clear_topics();
 };
 
@@ -413,6 +415,7 @@ exports.initialize = function () {
         // Grab first topic in this stream
         var topic = sub.name + '1';
 
+        $(e.target).parents('li').addClass('active-filter');
         narrow.activate([{operator: 'stream',  operand: sub.name},
                          {operator: 'topic', operand: topic}],
                         {select_first_unread: true, trigger: 'sidebar'});
@@ -428,8 +431,9 @@ exports.initialize = function () {
 };
 
 function actually_update_streams_for_search() {
-    exports.update_streams_sidebar();
-    resize.resize_page_components();
+    // Spark TODO: Implement search.
+    // exports.update_streams_sidebar();
+    // resize.resize_page_components();
 }
 
 var update_streams_for_search = _.throttle(actually_update_streams_for_search, 50);

@@ -260,11 +260,11 @@ function initialize_stream_data() {
     scrollbar_updated = false;
     filter = new Filter([
         {operator: 'stream', operand: 'cars'},
-        {operator: 'topic', operand: 'sedans'},
+        {operator: 'topic', operand: 'cars1'},
     ]);
     stream_list.handle_narrow_activated(filter);
     assert(!$("ul.filters li").hasClass('active-filter'));
-    assert(!$('<cars sidebar row html>').hasClass('active-filter')); // false because of topic
+    assert($('<cars sidebar row html>').hasClass('active-filter')); // false because of topic
     assert(scrollbar_updated);  // Make sure we are updating perfectScrollbar.
 
     filter = new Filter([
@@ -375,29 +375,9 @@ function initialize_stream_data() {
     stream_list.update_dom_with_unread_counts(counts);
     assert.equal($('<stream-value>').text(), '99');
     assert(stream_li.hasClass('stream-with-count'));
-
-    var topic_results;
-
-    topic_list.set_count = function (stream_id, topic, count) {
-        topic_results = {
-            stream_id: stream_id,
-            topic: topic,
-            count: count,
-        };
-    };
-
-    var topic_count = new Dict({fold_case: true});
-    topic_count.set('lunch', '555');
-    counts.topic_count.set(stream_id, topic_count);
-
-    stream_list.update_dom_with_unread_counts(counts);
-
-    assert.deepEqual(topic_results, {
-        stream_id: stream_id,
-        topic: 'lunch',
-        count: 555,
-    });
 }());
+
+// Spark TODO: Test that confirms the unread count pips are correct.
 
 (function test_create_initial_sidebar_rows() {
     initialize_stream_data();

@@ -98,54 +98,6 @@ $(function () {
         initialize_long_tap();
     }
 
-    var select_message_function = function (e) {
-        if (is_clickable_message_element($(e.target))) {
-            // If this click came from a hyperlink, don't trigger the
-            // reply action.  The simple way of doing this is simply
-            // to call e.stopPropagation() from within the link's
-            // click handler.
-            //
-            // Unfortunately, on Firefox, this breaks Ctrl-click and
-            // Shift-click, because those are (apparently) implemented
-            // by adding an event listener on link clicks, and
-            // stopPropagation prevents them from being called.
-            return;
-        }
-
-        // A tricky issue here is distinguishing hasty clicks (where
-        // the mouse might still move a few pixels between mouseup and
-        // mousedown) from selecting-for-copy.  We handle this issue
-        // by treating it as a click if distance is very small
-        // (covering the long-click case), or fairly small and over a
-        // short time (covering the hasty click case).  This seems to
-        // work nearly perfectly.  Once we no longer need to support
-        // older browsers, we may be able to use the window.selection
-        // API instead.
-        if ((drag.val < 5 && drag.time < 150) || drag.val < 2) {
-            var row = $(this).closest(".message_row");
-            var id = rows.id(row);
-
-            if (message_edit.is_editing(id)) {
-                // Clicks on a message being edited shouldn't trigger a reply.
-                return;
-            }
-
-            current_msg_list.select_id(id);
-            compose_actions.respond_to_message({trigger: 'message click'});
-            e.stopPropagation();
-            popovers.hide_all();
-        }
-    };
-
-    // if on normal non-mobile experience, a `click` event should run the message
-    // selection function which will open the compose box  and select the message.
-    if (!util.is_mobile()) {
-        $("#main_div").on("click", ".messagebox", select_message_function);
-    // on the other hand, on mobile it should be done with a long tap.
-    } else {
-        $("#main_div").on("longtap", ".messagebox", select_message_function);
-    }
-
     function toggle_star(message_id) {
         // Update the message object pointed to by the various message
         // lists.
@@ -312,6 +264,7 @@ $(function () {
         }
     });
 
+    // A click on a 1:1 message.
     $('#user_presences').expectOne().on('click', '.selectable_sidebar_block', function (e) {
         var user_id = $(e.target).parents('li').attr('data-user-id');
         var email = people.get_person_from_user_id(user_id).email;
@@ -330,6 +283,7 @@ $(function () {
         // Since we're stopping propagation we have to manually close any
         // open popovers.
         popovers.hide_all();
+        $(e.target).parents('li').addClass('active-filter');
     });
     // Spark TODO: This test is related to the right-sidebar and group messaging. Remove or fix.
     // $('#group-pms').expectOne().on('click', '.selectable_sidebar_block', function (e) {

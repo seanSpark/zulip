@@ -787,7 +787,6 @@ JS_SPECS = {
             'js/dict.js',
             'js/components.js',
             'js/localstorage.js',
-            'js/drafts.js',
             'js/channel.js',
             'js/setup.js',
             'js/unread_ui.js',
@@ -798,7 +797,6 @@ JS_SPECS = {
             'js/rows.js',
             'js/people.js',
             'js/unread.js',
-            'js/topic_list.js',
             'js/pm_list.js',
             'js/pm_conversations.js',
             'js/recent_senders.js',
@@ -897,7 +895,6 @@ JS_SPECS = {
             'js/admin_sections.js',
             'js/admin.js',
             'js/tab_bar.js',
-            'js/right_nav.js',
             'js/emoji.js',
             'js/custom_markdown.js',
             'js/bot_data.js',
@@ -909,6 +906,9 @@ JS_SPECS = {
             'js/ui_init.js',
             'js/emoji_picker.js',
             'js/compose_ui.js',
+            # New JS files:
+            'js/right_nav.js',
+            'js/current_user_nav.js',
         ],
         'output_filename': 'min/app.js'
     },

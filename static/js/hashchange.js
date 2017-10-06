@@ -189,7 +189,7 @@ function do_hashchange(from_reload) {
 var ignore = {
     flag: false,
     prev: null,
-    old_hash: typeof window !== "undefined" ? window.location.hash : "#",
+    old_hash: (typeof window !== "undefined" && typeof window.location !== "undefined") ? window.location.hash : "#",
     group: null,
 };
 

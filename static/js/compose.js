@@ -199,7 +199,6 @@ function send_message_socket(request, success, error) {
 
 function clear_compose_box() {
     $("#new_message_content").val('').focus();
-    drafts.delete_draft_after_send();
     compose_ui.autosize_textarea();
     $("#send-status").hide(0);
     $("#compose-send-button").prop('disabled', false);

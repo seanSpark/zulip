@@ -54,6 +54,17 @@ exports.get_by_email = function (email) {
     return person;
 };
 
+exports.get_from_pm_filter = function (filter) {
+    if (!filter.has_operator("pm-with")) {
+        blueslip.warn(
+            'Tried to get a person from a non-pm filter ' + filter
+        );
+    }
+
+    var emails = filter.operands("pm-with")[0].split(',');
+    return people.get_by_email(emails[0]);
+};
+
 exports.get_realm_count = function () {
     // This returns the number of active people in our realm.  It should
     // exclude bots and deactivated users.
@@ -756,6 +767,10 @@ exports.my_current_email = function () {
 
 exports.my_current_user_id = function () {
     return my_user_id;
+};
+
+exports.my_full_avatar = function () {
+    return people_by_user_id_dict.get(my_user_id).avatar_url;
 };
 
 exports.is_my_user_id = function (user_id) {

@@ -39,6 +39,7 @@
 
 #streams_inline_cog {
     margin-right: 10px;
+    float:right;
 }
 
 .hashtag:empty:after {
@@ -119,13 +120,14 @@ ul.filters hr {
 li.active-filter,
 li.active-sub-filter {
     font-weight: 600 !important;
-    background: hsl(202, 56%, 91%);
+    background: #fff;
     position: relative;
 }
 
 .left-sidebar .sidebar-title a {
     color: inherit;
     text-decoration: none;
+    font-weight:bold;
 }
 
 .left-sidebar .sidebar-title:hover {
@@ -156,8 +158,8 @@ li.hidden-filter {
 }
 
 .left-sidebar li {
-    padding-top: 2px;
-    padding-bottom: 2px;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
 #global_filters .global-filter i {
@@ -263,13 +265,17 @@ ul.filters .arrow {
 }
 
 ul.filters li:hover .arrow {
-    display: inline;
+    /* Spark TODO: When we add settings in for each group chat, this will be a good place
+    to start since it pulls up a channel-specific settings modal */;
+    display: none;
     cursor: pointer;
     color: hsl(0, 0%, 53%);
 }
 
 ul.filters li .arrow:hover {
-    display: inline;
+    /* Spark TODO: When we add settings in for each group chat, this will be a good place
+    to start since it pulls up a channel-specific settings modal */;
+    display: none;
     cursor: pointer;
     color: hsl(0, 0%, 0%);
 }
@@ -315,6 +321,7 @@ ul.filters li.out_of_home_view li.muted_topic {
 }
 .stream_sidebar_privacy_swatch {
     color:#00CFEA;
+    font-size:18px;
 }
 
 #stream_filters .subscription_block::after {
@@ -332,7 +339,7 @@ ul.filters li.out_of_home_view li.muted_topic {
 }
 
 .stream-privacy {
-    font-size: 15px;
+    font-size: 18px;
 }
 
 .stream-privacy .icon-vector-lock {
@@ -430,7 +437,12 @@ li.expanded_private_message a {
 .left_pane_header {
     margin-right: 0px;
     padding-left: 12px;
-    padding-top: 12px;
+    padding-top: 6px;
+    padding-bottom:6px;
+}
+.active-tab {
+    background-color: #fff;
+    box-shadow: 5px 0px 4px -4px #fff;
 }
 
 #stream_filters .inactive_stream {

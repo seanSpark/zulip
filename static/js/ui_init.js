@@ -268,7 +268,6 @@ $(function () {
     compose_fade.initialize();
     pm_list.initialize();
     stream_list.initialize();
-    drafts.initialize();
     sent_messages.initialize();
     compose.initialize();
     ui.initialize();

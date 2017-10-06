@@ -7,34 +7,6 @@ zrequire('top_left_corner');
 
 var noop = function () {};
 
-(function test_narrowing() {
-    var pm_expanded;
-
-    set_global('pm_list', {
-        close: noop,
-        expand: function () { pm_expanded = true; },
-    });
-
-    assert(!pm_expanded);
-    var filter = new Filter([
-        {operator: 'is', operand: 'private'},
-    ]);
-    top_left_corner.handle_narrow_activated(filter);
-    assert(pm_expanded);
-
-    filter = new Filter([
-        {operator: 'is', operand: 'mentioned'},
-    ]);
-    top_left_corner.handle_narrow_activated(filter);
-    assert(top_left_corner.get_global_filter_li('mentioned').hasClass('active-filter'));
-
-    filter = new Filter([
-        {operator: 'in', operand: 'home'},
-    ]);
-    top_left_corner.handle_narrow_activated(filter);
-    assert(top_left_corner.get_global_filter_li('home').hasClass('active-filter'));
-}());
-
 (function test_update_count_in_dom() {
     function make_elem(elem, count_selector, value_selector) {
         var count = $(count_selector);

@@ -80,7 +80,6 @@ var keypress_mappings = {
     83: {name: 'narrow_by_subject', message_view_only: true}, //'S'
     86: {name: 'view_selected_stream', message_view_only: false}, //'V'
     99: {name: 'compose', message_view_only: true}, // 'c'
-    100: {name: 'open_drafts', message_view_only: false}, // 'd'
     103: {name: 'gear_menu', message_view_only: true}, // 'g'
     105: {name: 'message_actions', message_view_only: true}, // 'i'
     106: {name: 'vim_down', message_view_only: true}, // 'j'
@@ -289,13 +288,6 @@ exports.process_enter_key = function (e) {
         return false;
     }
 
-    // This handles when pressing enter while looking at drafts.
-    // It restores draft that is focused.
-    if (drafts.drafts_overlay_open()) {
-        drafts.drafts_handle_events(e, "enter");
-        return true;
-    }
-
     // If we're on a button or a link and have pressed enter, let the
     // browser handle the keypress
     //
@@ -398,18 +390,6 @@ exports.process_hotkey = function (e, hotkey) {
             return exports.process_tab_key();
         case 'shift_tab':
             return exports.process_shift_tab_key();
-    }
-
-    switch (event_name) {
-        // TODO: break out specific handlers for up_arrow,
-        //       down_arrow, and backspace
-        case 'up_arrow':
-        case 'down_arrow':
-        case 'backspace':
-            if (drafts.drafts_overlay_open()) {
-                drafts.drafts_handle_events(e, event_name);
-                return true;
-            }
     }
 
     if (hotkey.message_view_only && overlays.is_active()) {
@@ -595,9 +575,6 @@ exports.process_hotkey = function (e, hotkey) {
                 return false;
             }
             narrow.narrow_to_next_topic();
-            return true;
-        case 'open_drafts':
-            drafts.toggle();
             return true;
         case 'reply_message': // 'r': respond to message
             // Note that you can "enter" to respond to messages as well,

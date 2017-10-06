@@ -1,9 +1,11 @@
 <div id="right-nav-left-side">
     <!-- Template for a 1:1 chat -->
-    <img src="/static/images/example_nurse.png" class="right-nav-photo"/>
+    <img src="{{picture_url}}" class="right-nav-photo"/>
     <div class="private-chat-nav-name-container">
         <div class="private-chat-nav-name">{{name}}</div>
+        {{#is_private }}
         <div class="private-chat-nav-role">Critical Care Unit - Charge Nurse</div>
+        {{/is_private}}
     </div>
 </div>
 <div class="right-nav-right-side">
